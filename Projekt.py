@@ -342,7 +342,7 @@ def load_data():
     market_data = yf.download('SPY', start="2016-04-01", end="2026-04-01")['Close'].dropna()
     return data, market_data
 
-st.title("🚀 Magnificent 7: Risk & Return Dashboard")
+st.title(" Magnificent 7: Risk & Return Dashboard")
 st.markdown("Dieses Dashboard analysiert ein gleichgewichtetes Portfolio der 'Magnificent 7' über verschiedene Zeithorizonte und Risikomodelle.")
 
 # Daten laden
