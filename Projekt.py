@@ -326,7 +326,6 @@ autolabel(rects2)
 fig.tight_layout()
 plt.show()
 
-pip install streamlit
 import streamlit as st
 
 
@@ -489,3 +488,4 @@ with col_sim_plot:
     ax2.set_yticklabels([])
     ax2.legend()
     st.pyplot(fig2)
+
