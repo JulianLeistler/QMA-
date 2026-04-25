@@ -5,7 +5,7 @@ import scipy.stats as stats
 
 tickers = ['AAPL', 'TSLA', 'MSFT', 'META', 'AMZN', 'GOOGL', 'NVDA'] #Ticker der MAG7 
 start_capital = 100000
-
+data = yf.download(tickers, start="2016-04-01", end="2026-04-01")['Close']
 #Berechnung der täglichen Renditen (diskret und logarithmisch)
 returns_discrete = data.pct_change().dropna()
 returns_log = np.log(data / data.shift(1)).dropna()
