@@ -13,7 +13,7 @@ st.set_page_config(page_title="Mag7 Risk Dashboard", layout="wide")
 def get_portfolio_data():
     tickers = ['AAPL', 'TSLA', 'MSFT', 'META', 'AMZN', 'GOOGL', 'NVDA']
     # Download
-    data = yf.download(tickers, start="2016-04-01", end="2026-04-01")['Close']
+    data = yf.download(tickers, start="2016-04-01", end="2026-04-01", auto_adjust=False)['Close']
     
     # Berechnung der täglichen Log-Renditen (Gleichgewichtet)
     daily_simple_returns = data.pct_change().mean(axis=1)
