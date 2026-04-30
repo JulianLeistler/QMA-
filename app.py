@@ -1,9 +1,11 @@
 import streamlit as st
-import yfinance as yf
 import pandas as pd
 import numpy as np
 import scipy.stats as stats
 import plotly.graph_objects as go
+
+from src.qma_risk.config import APP_CONFIG
+from src.qma_risk.data import load_project_market_data
 
 # --- SEITEN-KONFIGURATION ---
 st.set_page_config(page_title="Mag7 Risk & Performance Dashboard", layout="wide")
@@ -11,34 +13,28 @@ st.set_page_config(page_title="Mag7 Risk & Performance Dashboard", layout="wide"
 # --- CACHE DATEN-LADEFUNKTION ---
 @st.cache_data(ttl=86400) # Cacht die Daten für 24 Stunden
 def load_data():
-    tickers = ['AAPL', 'TSLA', 'MSFT', 'META', 'AMZN', 'GOOGL', 'NVDA']
-    data = yf.download(tickers, start="2016-04-01", end="2026-04-01", auto_adjust=False)['Close']
-    benchmark_world_data = yf.download("VT", start="2016-04-01", end="2026-04-01", auto_adjust=False)['Close']
-    benchmark_risk_free_data = yf.download("^TNX", start="2016-04-01", end="2026-04-01", auto_adjust=False)['Close']
-    
-    # Berechnung der täglichen Renditen
-    returns_discrete = data.pct_change().dropna()
-    returns_log = np.log(data / data.shift(1)).dropna()
-    
-    # Portfolio-Gewichtung (1/7)
-    weights = np.array([1/len(tickers)] * len(tickers))
-    
+    stock_prices, returns_discrete, returns_log, benchmark_world_data, benchmark_risk_free_data = load_project_market_data()
+    weights = np.array([1 / len(APP_CONFIG.stock_tickers)] * len(APP_CONFIG.stock_tickers))
     portfolio_returns_discrete = returns_discrete.dot(weights)
     portfolio_returns_log = returns_log.dot(weights)
-    
-    return portfolio_returns_discrete, portfolio_returns_log, benchmark_world_data, benchmark_risk_free_data
+    return stock_prices, portfolio_returns_discrete, portfolio_returns_log, benchmark_world_data, benchmark_risk_free_data
 
 # Daten laden
 try:
-    port_ret_disc, port_ret_log, bench_world, bench_rf = load_data()
+    stock_prices, port_ret_disc, port_ret_log, bench_world, bench_rf = load_data()
 except Exception as e:
-    st.error("Fehler beim Laden der Finanzdaten. Bitte Internetverbindung prüfen.")
+    st.error(f"Fehler beim Laden der Finanzdaten. Bitte Internetverbindung prüfen. Details: {e}")
     st.stop()
 
 # --- SIDEBAR (BENUTZEREINGABEN) ---
 st.sidebar.header("⚙️ Parameter Einstellungen")
 
-start_capital = st.sidebar.number_input("Startkapital ($)", min_value=1000, value=100000, step=5000)
+start_capital = st.sidebar.number_input(
+    "Startkapital (USD)",
+    min_value=1000,
+    value=APP_CONFIG.start_capital_usd,
+    step=5000,
+)
 var_level_pct = st.sidebar.slider("VaR Level (Alpha) in %", min_value=1.0, max_value=10.0, value=5.0, step=0.5)
 alpha_level = var_level_pct / 100.0
 
@@ -49,7 +45,7 @@ black_swan = st.sidebar.checkbox("Black-Swan Event simulieren (50% Crash)", valu
 
 st.sidebar.divider()
 st.sidebar.subheader("Sparplan Parameter")
-monatliche_rate = st.sidebar.number_input("Monatliche Sparrate ($)", min_value=10, value=100, step=10)
+monatliche_rate = st.sidebar.number_input("Monatliche Sparrate (USD)", min_value=10, value=100, step=10)
 
 
 # --- FUNKTIONEN (Aus deinem originalen Code) ---
@@ -175,7 +171,15 @@ def run_savings_mc(log_returns, monthly_savings, years, simulations=10000, black
 
 # --- MAIN DASHBOARD ---
 st.title("📈 Magnificent 7: Risiko & Portfolio Dashboard")
-st.markdown("Analyse des gleichgewichteten Portfolios der Mag7 (Apple, Tesla, Microsoft, Meta, Amazon, Alphabet, NVIDIA).")
+st.markdown(
+    "Analyse des gleichgewichteten Portfolios der Mag7 "
+    "(Apple, Tesla, Microsoft, Meta, Amazon, Alphabet, NVIDIA)."
+)
+st.caption(
+    "Die Aktienrenditen werden aus Adjusted-Close-Daten ab dem 2012-05-18 geladen. "
+    "Alle Betraege werden direkt in USD auf Basis des Startkapitals ausgewiesen. "
+    "Eine USD/EUR-Wechselkursmodellierung ist bewusst nicht Teil des Projekts."
+)
 
 tab1, tab2, tab3 = st.tabs(["📊 1-Jahres-Risiko & KPIs", "🔮 Langfristiges Risiko (MC)", "💰 Sparplan-Simulation"])
 
@@ -188,9 +192,9 @@ with tab1:
     g_var, g_es = calculate_gaussian_risk(port_ret_disc, start_capital, alpha_level, 252)
     l_var, l_es = calculate_lognormal_risk(port_ret_log, start_capital, alpha_level, 252)
     
-    col1.metric("Historisch (BHS) - VaR", f"$ {abs(h_var):,.2f}", f"ES: $ {abs(h_es):,.2f}", delta_color="inverse")
-    col2.metric("Gaußsch (Normal) - VaR", f"$ {abs(g_var):,.2f}", f"ES: $ {abs(g_es):,.2f}", delta_color="inverse")
-    col3.metric("Lognormal - VaR", f"$ {abs(l_var):,.2f}", f"ES: $ {abs(l_es):,.2f}", delta_color="inverse")
+    col1.metric("Historisch (BHS) - VaR", f"{abs(h_var):,.2f} USD", f"ES: {abs(h_es):,.2f} USD", delta_color="inverse")
+    col2.metric("Gaußsch (Normal) - VaR", f"{abs(g_var):,.2f} USD", f"ES: {abs(g_es):,.2f} USD", delta_color="inverse")
+    col3.metric("Lognormal - VaR", f"{abs(l_var):,.2f} USD", f"ES: {abs(l_es):,.2f} USD", delta_color="inverse")
 
     st.divider()
     
@@ -241,9 +245,9 @@ with tab2:
     mc_es_pnl = es_end_value - start_capital
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("Durchschnittlicher Endwert", f"$ {np.mean(final_vals):,.2f}")
-    col2.metric(f"Value at Risk ({var_level_pct}%)", f"$ {mc_var_pnl:,.2f}", "Verlust bei Eintreten", delta_color="inverse")
-    col3.metric("Expected Shortfall", f"$ {mc_es_pnl:,.2f}", "Durchschn. Verlust im Tail", delta_color="inverse")
+    col1.metric("Durchschnittlicher Endwert", f"{np.mean(final_vals):,.2f} USD")
+    col2.metric(f"Value at Risk ({var_level_pct}%)", f"{mc_var_pnl:,.2f} USD", "Verlust bei Eintreten", delta_color="inverse")
+    col3.metric("Expected Shortfall", f"{mc_es_pnl:,.2f} USD", "Durchschn. Verlust im Tail", delta_color="inverse")
 
     st.subheader("Simulierte Portfolio-Entwicklung (Beispielhafte 100 Pfade)")
     fig_mc = go.Figure()
@@ -254,7 +258,7 @@ with tab2:
     
     # Durchschnittslinie hinzufügen
     fig_mc.add_trace(go.Scatter(x=x_axis, y=np.mean(paths, axis=1), mode='lines', name='Durchschnitt', line=dict(color='red', width=3)))
-    fig_mc.update_layout(yaxis_title="Portfoliowert in $", xaxis_title="Handelstage", template="plotly_white", margin=dict(l=0, r=0, t=30, b=0))
+    fig_mc.update_layout(yaxis_title="Portfoliowert in USD", xaxis_title="Handelstage", template="plotly_white", margin=dict(l=0, r=0, t=30, b=0))
     st.plotly_chart(fig_mc, use_container_width=True)
 
 
@@ -276,10 +280,10 @@ with tab3:
     sp_es_pnl = sp_es_end_value - sp_total_invested
 
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Gesamt Investiert", f"$ {sp_total_invested:,.2f}")
-    col2.metric("Ø Endwert", f"$ {np.mean(sp_final_vals):,.2f}")
-    col3.metric(f"VaR ({var_level_pct}%) PnL", f"$ {sp_var_pnl:,.2f}", "Gegenüber Einzahlung")
-    col4.metric("ES PnL", f"$ {sp_es_pnl:,.2f}", "Gegenüber Einzahlung")
+    col1.metric("Gesamt Investiert", f"{sp_total_invested:,.2f} USD")
+    col2.metric("Ø Endwert", f"{np.mean(sp_final_vals):,.2f} USD")
+    col3.metric(f"VaR ({var_level_pct}%) PnL", f"{sp_var_pnl:,.2f} USD", "Gegenüber Einzahlung")
+    col4.metric("ES PnL", f"{sp_es_pnl:,.2f} USD", "Gegenüber Einzahlung")
 
     st.subheader("Sparplan Vermögensaufbau (Beispielhafte 100 Pfade)")
     fig_sp = go.Figure()
@@ -293,5 +297,5 @@ with tab3:
     invested_line = np.linspace(0, sp_total_invested, sp_years * 252)
     fig_sp.add_trace(go.Scatter(x=sp_x_axis, y=invested_line, mode='lines', name='Eingezahltes Kapital', line=dict(color='black', width=3, dash='dash')))
     
-    fig_sp.update_layout(yaxis_title="Vermögen in $", xaxis_title="Handelstage", template="plotly_white", margin=dict(l=0, r=0, t=30, b=0))
+    fig_sp.update_layout(yaxis_title="Vermögen in USD", xaxis_title="Handelstage", template="plotly_white", margin=dict(l=0, r=0, t=30, b=0))
     st.plotly_chart(fig_sp, use_container_width=True)
