@@ -1,76 +1,63 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-# ... (Hier kommen deine Plotly-Funktionen und Risiko-Funktionen rein) ...
+# WICHTIG: Hier importierst du deine Funktionen aus deinen anderen Dateien!
+# from meine_funktionen import plot_monte_carlo_fan_chart, plot_historical_performance
+# from meine_funktionen import calculate_monte_carlo_risk_blackswan, calculate_performance_kpis
 
-# 1. Page Config (Macht das Dashboard breit und gibt ihm einen Titel)
+# ==========================================
+# 1. PAGE CONFIG & CACHING
+# ==========================================
 st.set_page_config(page_title="MAG7 Risiko-Dashboard", layout="wide")
 
-# 2. CACHING: Wir berechnen die aufwendigen Pfade nur EINMAL
 @st.cache_data
 def get_cached_monte_carlo_paths(capital, days, simulations=10000):
     """Holt die Lognormal-Pfade für das Normal-Szenario"""
-    # Da var_level hier egal ist (wir wollen nur die Pfade), geben wir 0.05 als Dummy mit
-    _, _, _, pf_paths = calculate_monte_carlo_risk_blackswan(
-        portfolio_returns_log, capital, 0.05, days, simulations, black_swan=False
-    )
-    return pf_paths
+    # _, _, _, pf_paths = calculate_monte_carlo_risk_blackswan(
+    #     portfolio_returns_log, capital, 0.05, days, simulations, black_swan=False
+    # )
+    # return pf_paths
+    pass # Platzhalter, bis du deine echten Funktionen einbindest
 
 @st.cache_data
 def get_cached_black_swan_paths(capital, days, simulations=10000):
     """Holt die Lognormal-Pfade inkl. DotCom-Crash"""
-    _, _, _, pf_paths = calculate_monte_carlo_risk_blackswan(
-        portfolio_returns_log, capital, 0.05, days, simulations, 
-        black_swan=True, crash_data=dotcom_returns
-    )
-    return pf_paths
+    # _, _, _, pf_paths = calculate_monte_carlo_risk_blackswan(
+    #     portfolio_returns_log, capital, 0.05, days, simulations, 
+    #     black_swan=True, crash_data=dotcom_returns
+    # )
+    # return pf_paths
+    pass # Platzhalter
 
-# ---------------------------------------------------------
-# SIDEBAR
-# ---------------------------------------------------------
+# Hilfs-Dictionary für die Dropdowns (Macht aus "5 %" die Zahl 0.05)
+var_level_mapping = {"1 %": 0.01, "5 %": 0.05, "10 %": 0.10, "20 %": 0.20}
+
+# ==========================================
+# 2. SIDEBAR (Nur globale Parameter!)
+# ==========================================
 with st.sidebar:
     st.header("⚙️ Parameter")
-    
-    # 1. Startkapital (Gibt den Wert '100000' als Integer zurück)
     start_capital = st.number_input(
         "Startkapital ($)", 
         min_value=10000, max_value=10000000, value=100000, step=10000
     )
-    
-    st.markdown("---")
-    
-    # 2. Für den Black Swan Reiter (Auswahl der Jahre)
-    st.subheader("Black-Swan-Simulation")
-    st.write("Wähle den Anlagehorizont für den Stresstest:")
-    bs_horizon_years = st.selectbox("Anzahl Jahre", [1, 5, 10, 20])
-    
-    # Wir rechnen die Jahre für den Code direkt in Tage um (252 Handelstage)
-    bs_horizon_days = bs_horizon_years * 252
+    # Das Black-Swan-Dropdown haben wir hier entfernt! Es kommt in den Tab.
 
-# ---------------------------------------------------------
-# HAUPTSEITE (Titel & Tabs)
-# ---------------------------------------------------------
+# ==========================================
+# 3. HAUPTSEITE (Titel & Tabs)
+# ==========================================
 st.title("Magnificent 7: Risiko - Dashboard")
 
-# Wir legen die 5 Reiter an
 tab_uebersicht, tab_1j, tab_5j, tab_10j, tab_blackswan = st.tabs([
     "Übersicht", "1-Jahres-Risiko", "5-Jahres-Risiko", "10-Jahres-Risiko", "Black-Swan-Sim"
 ])
 
-# ==========================================
+# ---------------------------------------------------------
 # REITER 0: ÜBERSICHT
-# ==========================================
+# ---------------------------------------------------------
 with tab_uebersicht:
     st.header("Performance KPIs")
-    
-    # Hier rufst du deine Funktion calculate_performance_kpis auf
-    # (Wir nehmen an, du hast das kpi_df vorliegen)
-    
-    # 4 Spalten für die KPIs anlegen
     col1, col2, col3, col4 = st.columns(4)
-    
-    # Die Metriken einfügen (mit den Tooltips/Helps, die du skizziert hast)
-    # Beispielwerte, hier kommen später deine echten Variablen rein
     col1.metric("Beta", "1.15", help="Sensitivität gegenüber dem Markt.")
     col2.metric("Sharpe Ratio", "1.82", help="Überrendite pro Einheit Gesamtrisiko.")
     col3.metric("Roy's Safety First", "1.05", help="Risiko, den Markt zu underperformen.")
@@ -78,64 +65,93 @@ with tab_uebersicht:
     
     st.markdown("---")
     
-    # Der Historische Chart (mit Spalte rechts, wie besprochen)
     col_chart, col_text = st.columns([0.7, 0.3])
     with col_chart:
-        # Hier kommt dein historischer Chart rein
-        # st.plotly_chart(mein_historischer_chart, use_container_width=True)
-        st.info("Hier erscheint der Chart: MAG7 vs. Markt")
+        # HIER kommt der Linienchart (MAG7 vs Markt) hin
+        # fig_hist, df_hist = plot_historical_performance(...)
+        # st.plotly_chart(fig_hist, use_container_width=True)
+        st.info("📊 Platzhalter: Liniendiagramm Historische Performance (MAG7 vs. Markt)")
         
     with col_text:
-        # Hier könnte dein DataFrame oder ein kleiner Erklärtext stehen
         st.write("Wachstums-Tabelle")
+        # st.dataframe(df_hist)
+        st.info("🧮 Platzhalter: Datentabelle")
         
     st.markdown("---")
     st.subheader("Vollständige Risikomatrix")
     # st.dataframe(core_results)
+    st.info("🧮 Platzhalter: Deine große 'core_results' Tabelle")
 
-# ==========================================
-# REITER 1: 1-Jahres-Risiko (Beispielhaft für 1, 5 und 10)
-# ==========================================
+# ---------------------------------------------------------
+# REITER 1: 1-Jahres-Risiko 
+# ---------------------------------------------------------
 with tab_1j:
-    # 2 Spalten für den Vergleich von VaR A und VaR B
+    # 1. Daten Laden (Einmalig für diesen Tab)
+    # paths_1j = get_cached_monte_carlo_paths(start_capital, 252)
+
     col_varA, col_varB = st.columns(2)
     
     with col_varA:
         st.subheader("Auswahl VaR-Level - A")
-        var_a_selection = st.selectbox("Level A", ["5 %", "1 %", "10 %"], key="var_a_1j")
-        # Hier baust du später deine kleine Tabelle ein
-        st.write("Tabelle für Historisch, Gaußsch, Lognormal")
+        var_a_str = st.selectbox("Level A", list(var_level_mapping.keys()), index=1, key="var_a_1j") # Default: 5%
+        var_a_val = var_level_mapping[var_a_str]
         
-        # Hier kommt dein Plotly Fan-Chart hin
-        st.info("Trichter-Chart A")
+        st.info("🧮 Platzhalter: Kleine Tabelle (Historisch, Gaußsch, Lognormal) für Level A")
+        
+        # HIER kommt der linke Fan-Chart hin
+        # fig_fan_a = plot_monte_carlo_fan_chart(paths_1j, start_capital, var_level=var_a_val, title=f"Monte Carlo ({var_a_str} VaR)")
+        # st.plotly_chart(fig_fan_a, use_container_width=True)
+        st.success(f"📈 Platzhalter: Fan-Chart (Trichter) für Level {var_a_str}")
         
     with col_varB:
         st.subheader("Auswahl VaR-Level - B")
-        var_b_selection = st.selectbox("Level B", ["1 %", "5 %", "10 %"], key="var_b_1j")
-        st.write("Tabelle für Historisch, Gaußsch, Lognormal")
+        var_b_str = st.selectbox("Level B", list(var_level_mapping.keys()), index=0, key="var_b_1j") # Default: 1%
+        var_b_val = var_level_mapping[var_b_str]
         
-        st.info("Trichter-Chart B")
+        st.info("🧮 Platzhalter: Kleine Tabelle (Historisch, Gaußsch, Lognormal) für Level B")
+        
+        # HIER kommt der rechte Fan-Chart hin
+        # fig_fan_b = plot_monte_carlo_fan_chart(paths_1j, start_capital, var_level=var_b_val, title=f"Monte Carlo ({var_b_str} VaR)")
+        # st.plotly_chart(fig_fan_b, use_container_width=True)
+        st.success(f"📈 Platzhalter: Fan-Chart (Trichter) für Level {var_b_str}")
 
-# (Die Reiter 5j und 10j sind im Prinzip Kopien von tab_1j)
+# (Die Reiter 5j und 10j bauen wir später exakt wie tab_1j auf)
+with tab_5j: st.write("Analog zu 1-Jahr aufbauen (Tage = 1260)")
+with tab_10j: st.write("Analog zu 1-Jahr aufbauen (Tage = 2520)")
 
-# ==========================================
+# ---------------------------------------------------------
 # REITER: Black-Swan-Simulation
-# ==========================================
+# ---------------------------------------------------------
 with tab_blackswan:
     st.markdown("""
     **Das Black-Swan-Event** simuliert den VaR & ES auf Basis eines zufällig eintretenden Crashes. 
-    Dieses Event wurde mit den Renditen & Volatilitäten der DotCom-Blase simuliert.
+    Dieses Event wurde mit den Renditen & Volatilitäten aus dem Crash der Dotcom-Blase simuliert.
     """)
+    
+    # NEU: Die Auswahl der Jahre ist jetzt HIER im Tab, nicht in der Sidebar!
+    bs_horizon_years = st.selectbox("Auswahl Anlagehorizont (Jahre)", [1, 5, 10, 20], index=1)
+    bs_horizon_days = bs_horizon_years * 252
+    
+    # Daten Laden basierend auf der Dropdown-Auswahl
+    # paths_normal = get_cached_monte_carlo_paths(start_capital, bs_horizon_days)
+    # paths_swan = get_cached_black_swan_paths(start_capital, bs_horizon_days)
     
     col_normal, col_swan = st.columns(2)
     
     with col_normal:
-        st.subheader("Normal (Ohne Black Swan)")
-        # Hier: Tabelle VaR & Chart
-        st.info("Trichter-Chart 'Normal'")
+        st.subheader(f"Normal (Ohne Black Swan) - {bs_horizon_years} Jahre")
+        st.info("🧮 Platzhalter: Tabelle VaR & ES für Normal-Szenario")
+        
+        # HIER kommt der Fan-Chart für das normale Lognormal-Szenario
+        # fig_normal = plot_monte_carlo_fan_chart(paths_normal, start_capital, var_level=0.05, title="Normal-Szenario")
+        # st.plotly_chart(fig_normal, use_container_width=True)
+        st.success("📈 Platzhalter: Fan-Chart 'Normal'")
         
     with col_swan:
-        st.subheader("Black Swan (DotCom Crash)")
-        # Hier: Tabelle VaR & Chart
-        st.info("Trichter-Chart 'Black Swan'")
-
+        st.subheader(f"Black Swan (DotCom Crash) - {bs_horizon_years} Jahre")
+        st.info("🧮 Platzhalter: Tabelle VaR & ES für Black-Swan-Szenario")
+        
+        # HIER kommt der Fan-Chart für das Crash-Szenario
+        # fig_swan = plot_monte_carlo_fan_chart(paths_swan, start_capital, var_level=0.05, title="Black Swan Szenario")
+        # st.plotly_chart(fig_swan, use_container_width=True)
+        st.error("📉 Platzhalter: Fan-Chart 'Black Swan' (Rot eingefärbt)")
