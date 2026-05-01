@@ -173,4 +173,4 @@ with tab_1j:
         var_a_str = st.selectbox("Level A", list(var_level_mapping.keys()), index=1, key="var_a_1j") 
         var_a_val = var_level_mapping[var_a_str]
         st.info(f"🧮 Tabelle: VaR und ES für {var_a_str}")
-        fig_fan_a = plot_monte_carlo_fan_chart(
+        fig_fan_a = plot_monte_carlo_fan_chart()
