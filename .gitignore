@@ -1,4 +1,42 @@
+# --- Workspace-Files (lokal, nicht ins Team-Repo) ---
+CLAUDE.md
+AGENTS.md
+MEMORY.md
+STATUS.md
+.claude/
+
+# Codex/Claude lokale Arbeitsbasis — nur fuer uns, nicht fuer das Team-Repo
+# Ausnahmen weiter unten fuer Module, die das Team-Notebook importiert.
+src/
+!src/qma_risk/
+!src/qma_risk/__init__.py
+!src/qma_risk/plotting.py
+docs/
+
+# --- Python ---
 __pycache__/
-*.pyc
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# --- Virtual envs ---
+.venv/
+venv/
+env/
+
+# --- Jupyter / IPython ---
 .ipynb_checkpoints/
+.ipython/
+.jupyter_runtime/
+.mplconfig/
+
+# --- OS / Editor ---
 .DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
