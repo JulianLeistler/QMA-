@@ -18,7 +18,7 @@ st.markdown("""
     .main { background-color: #0e1117; color: white; }
     div[data-testid="stMetricValue"] { color: #00d4ff; }
     </style>
-    """, unsafe_allow_value=True)
+    """, unsafe_allow_html=True)
 
 # ==========================================
 # 2. KONFIGURATION & PARAMETER
