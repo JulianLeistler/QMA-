@@ -360,7 +360,7 @@ with tab_uebersicht:
      start_capital = start_capital,
      title = "Performance MAG7 vs. Markt vs. Risikofreier Zins (2012-2026)"
  )
-st.plotly_chart(fig_hist, use_container_width=True)
+ st.plotly_chart(fig_hist, use_container_width=True)
 
 # ----------------- REITER 1, 2, 3: RISIKO-HORIZONTE -----------------
 with tab_1y:
