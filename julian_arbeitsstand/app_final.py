@@ -276,75 +276,55 @@ def render_risk_tab(days, tab_title):
     col_a, col_b = st.columns(2)
     
     with col_a:
-        st.subheader("Szenario A")
+        st.subheader("Auswahl VaR-Level - A")
         lvl_a_name = st.selectbox("VaR-Level A", list(var_levels_ui.keys()), key=f"sel_a_{days}", label_visibility="collapsed")
         alpha_a = var_levels_ui[lvl_a_name]
         
-        # 1. Alle Berechnungen auf einmal durchführen (auch Monte Carlo)
+        # Berechnungen A
         h_var_a, h_es_a = calculate_historical_risk(port_ret_log, start_capital, alpha_a, days)
         g_var_a, g_es_a = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_a, days)
         l_var_a, l_es_a = calculate_lognormal_risk(port_ret_log, start_capital, alpha_a, days)
-        mc_var_a, mc_es_a, final_vals_a, paths_a = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_a, days, simulations=2000)
         
-        # 2. Saubere Vergleichstabelle erstellen
-        df_a = pd.DataFrame({
-            "Methode": ["Historisch", "Gaußsch", "Lognormal", "Monte Carlo"],
-            "VaR ($)": [h_var_a, g_var_a, l_var_a, mc_var_a],
-            "ES ($)": [h_es_a, g_es_a, l_es_a, mc_es_a]
-        })
-        st.dataframe(df_a.style.format({"VaR ($)": "{:,.0f}", "ES ($)": "{:,.0f}"}), hide_index=True, use_container_width=True)
-
-        # 3. Neues Histogramm: Verteilung der Monte-Carlo Endwerte
-        fig_hist_a = go.Figure()
-        fig_hist_a.add_trace(go.Histogram(x=final_vals_a, nbinsx=50, marker_color='#2c3e50', name="Endwerte"))
-        
-        # VaR und ES Linien einzeichnen (Startkapital + VaR/ES ergibt den Endwert auf der X-Achse)
-        cutoff_var_a = start_capital + mc_var_a
-        cutoff_es_a = start_capital + mc_es_a
-        fig_hist_a.add_vline(x=cutoff_var_a, line_dash="dash", line_color="red", annotation_text="VaR")
-        fig_hist_a.add_vline(x=cutoff_es_a, line_dash="dot", line_color="orange", annotation_text="ES")
-        
-        fig_hist_a.update_layout(title=f"Verteilung der MC-Endwerte ({lvl_a_name})", template="plotly_dark", height=300, margin=dict(l=0, r=0, t=30, b=0))
-        st.plotly_chart(fig_hist_a, use_container_width=True)
-
-        # 4. Der Fan-Chart (Trichter)
-        st.plotly_chart(plot_monte_carlo_fan_chart(paths_a, start_capital, alpha_a, f"Simulationspfade ({lvl_a_name})"), use_container_width=True)
-
+        st.write("---")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Historisch VaR", f"${h_var_a:,.0f}")
+        c1.metric("Historisch ES", f"${h_es_a:,.0f}")
+        c2.metric("Gaußsch VaR", f"${g_var_a:,.0f}")
+        c2.metric("Gaußsch ES", f"${g_es_a:,.0f}")
+        c3.metric("Lognormal VaR", f"${l_var_a:,.0f}")
+        c3.metric("Lognormal ES", f"${l_es_a:,.0f}")
 
     with col_b:
-        st.subheader("Szenario B")
+        st.subheader("Auswahl VaR-Level - B")
         lvl_b_name = st.selectbox("VaR-Level B", list(var_levels_ui.keys()), key=f"sel_b_{days}", index=1, label_visibility="collapsed")
         alpha_b = var_levels_ui[lvl_b_name]
         
-        # 1. Alle Berechnungen auf einmal durchführen (auch Monte Carlo)
+        # Berechnungen B
         h_var_b, h_es_b = calculate_historical_risk(port_ret_log, start_capital, alpha_b, days)
         g_var_b, g_es_b = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_b, days)
         l_var_b, l_es_b = calculate_lognormal_risk(port_ret_log, start_capital, alpha_b, days)
-        mc_var_b, mc_es_b, final_vals_b, paths_b = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_b, days, simulations=2000)
         
-        # 2. Saubere Vergleichstabelle erstellen
-        df_b = pd.DataFrame({
-            "Methode": ["Historisch", "Gaußsch", "Lognormal", "Monte Carlo"],
-            "VaR ($)": [h_var_b, g_var_b, l_var_b, mc_var_b],
-            "ES ($)": [h_es_b, g_es_b, l_es_b, mc_es_b]
-        })
-        st.dataframe(df_b.style.format({"VaR ($)": "{:,.0f}", "ES ($)": "{:,.0f}"}), hide_index=True, use_container_width=True)
+        st.write("---")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Historisch VaR", f"${h_var_b:,.0f}")
+        c1.metric("Historisch ES", f"${h_es_b:,.0f}")
+        c2.metric("Gaußsch VaR", f"${g_var_b:,.0f}")
+        c2.metric("Gaußsch ES", f"${g_es_b:,.0f}")
+        c3.metric("Lognormal VaR", f"${l_var_b:,.0f}")
+        c3.metric("Lognormal ES", f"${l_es_b:,.0f}")
 
-        # 3. Neues Histogramm: Verteilung der Monte-Carlo Endwerte
-        fig_hist_b = go.Figure()
-        fig_hist_b.add_trace(go.Histogram(x=final_vals_b, nbinsx=50, marker_color='#2c3e50', name="Endwerte"))
-        
-        # VaR und ES Linien einzeichnen
-        cutoff_var_b = start_capital + mc_var_b
-        cutoff_es_b = start_capital + mc_es_b
-        fig_hist_b.add_vline(x=cutoff_var_b, line_dash="dash", line_color="red", annotation_text="VaR")
-        fig_hist_b.add_vline(x=cutoff_es_b, line_dash="dot", line_color="orange", annotation_text="ES")
-        
-        fig_hist_b.update_layout(title=f"Verteilung der MC-Endwerte ({lvl_b_name})", template="plotly_dark", height=300, margin=dict(l=0, r=0, t=30, b=0))
-        st.plotly_chart(fig_hist_b, use_container_width=True)
-
-        # 4. Der Fan-Chart (Trichter)
-        st.plotly_chart(plot_monte_carlo_fan_chart(paths_b, start_capital, alpha_b, f"Simulationspfade ({lvl_b_name})"), use_container_width=True)
+    # Visualisierungen A und B
+    st.write("---")
+    col_chart_a, col_chart_b = st.columns(2)
+    
+    # Monte Carlo Sim für Charts
+    _, _, _, paths_a = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_a, days, simulations=2000)
+    _, _, _, paths_b = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_b, days, simulations=2000)
+    
+    with col_chart_a:
+        st.plotly_chart(plot_monte_carlo_fan_chart(paths_a, start_capital, alpha_a, f"Visualisierung VaR A ({lvl_a_name})"), use_container_width=True)
+    with col_chart_b:
+        st.plotly_chart(plot_monte_carlo_fan_chart(paths_b, start_capital, alpha_b, f"Visualisierung VaR B ({lvl_b_name})"), use_container_width=True)
 # ==========================================
 # 6. STREAMLIT APP LAYOUT
 # ==========================================
