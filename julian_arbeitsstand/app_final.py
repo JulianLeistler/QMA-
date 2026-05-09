@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import scipy.stats as stats
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 
 # ==========================================
 # 1. PAGE CONFIG & SETUP
@@ -162,6 +163,24 @@ def calculate_performance_kpis(portfolio_returns, benchmark_world_data, benchmar
 
     return {"Beta": beta, "Sharpe_Ratio": sharpe_ann, "Roys_Safety_First": rsf_ann, "Treynor_Ratio": treynor_ann}
 
+def get_comparison_data(log_ret, discrete_ret, capital):
+    results = []
+    # Wir nehmen die zwei Standard-Level für den Subplot-Vergleich
+    levels = {"95 %": 0.05, "99 %": 0.01}
+    
+    for h_name, days in horizons.items():
+        for lvl_name, alpha in levels.items():
+            # Berechne alle Methoden
+            h_var, _ = calculate_historical_risk(log_ret, capital, alpha, days)
+            g_var, _ = calculate_gaussian_risk(discrete_ret, capital, alpha, days)
+            l_var, _ = calculate_lognormal_risk(log_ret, capital, alpha, days)
+            
+            # Daten für DataFrame sammeln
+            results.append({"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Historisch", "VaR ($)": abs(h_var)})
+            results.append({"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Gaußsch", "VaR ($)": abs(g_var)})
+            results.append({"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Lognormal (MC)", "VaR ($)": abs(l_var)})
+            
+    return pd.DataFrame(results)
 # ==========================================
 # 4. PLOTTING FUNCTIONS
 # ==========================================
@@ -257,57 +276,75 @@ def render_risk_tab(days, tab_title):
     col_a, col_b = st.columns(2)
     
     with col_a:
-        st.subheader("Auswahl VaR-Level - A")
+        st.subheader("Szenario A")
         lvl_a_name = st.selectbox("VaR-Level A", list(var_levels_ui.keys()), key=f"sel_a_{days}", label_visibility="collapsed")
         alpha_a = var_levels_ui[lvl_a_name]
         
-        # Berechnungen A
+        # 1. Alle Berechnungen auf einmal durchführen (auch Monte Carlo)
         h_var_a, h_es_a = calculate_historical_risk(port_ret_log, start_capital, alpha_a, days)
         g_var_a, g_es_a = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_a, days)
         l_var_a, l_es_a = calculate_lognormal_risk(port_ret_log, start_capital, alpha_a, days)
+        mc_var_a, mc_es_a, final_vals_a, paths_a = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_a, days, simulations=2000)
         
-        st.write("---")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Historisch VaR", f"${h_var_a:,.0f}")
-        c1.metric("Historisch ES", f"${h_es_a:,.0f}")
-        c2.metric("Gaußsch VaR", f"${g_var_a:,.0f}")
-        c2.metric("Gaußsch ES", f"${g_es_a:,.0f}")
-        c3.metric("Lognormal VaR", f"${l_var_a:,.0f}")
-        c3.metric("Lognormal ES", f"${l_es_a:,.0f}")
+        # 2. Saubere Vergleichstabelle erstellen
+        df_a = pd.DataFrame({
+            "Methode": ["Historisch", "Gaußsch", "Lognormal", "Monte Carlo"],
+            "VaR ($)": [h_var_a, g_var_a, l_var_a, mc_var_a],
+            "ES ($)": [h_es_a, g_es_a, l_es_a, mc_es_a]
+        })
+        st.dataframe(df_a.style.format({"VaR ($)": "{:,.0f}", "ES ($)": "{:,.0f}"}), hide_index=True, use_container_width=True)
+
+        # 3. Neues Histogramm: Verteilung der Monte-Carlo Endwerte
+        fig_hist_a = go.Figure()
+        fig_hist_a.add_trace(go.Histogram(x=final_vals_a, nbinsx=50, marker_color='#2c3e50', name="Endwerte"))
+        
+        # VaR und ES Linien einzeichnen (Startkapital + VaR/ES ergibt den Endwert auf der X-Achse)
+        cutoff_var_a = start_capital + mc_var_a
+        cutoff_es_a = start_capital + mc_es_a
+        fig_hist_a.add_vline(x=cutoff_var_a, line_dash="dash", line_color="red", annotation_text="VaR")
+        fig_hist_a.add_vline(x=cutoff_es_a, line_dash="dot", line_color="orange", annotation_text="ES")
+        
+        fig_hist_a.update_layout(title=f"Verteilung der MC-Endwerte ({lvl_a_name})", template="plotly_dark", height=300, margin=dict(l=0, r=0, t=30, b=0))
+        st.plotly_chart(fig_hist_a, use_container_width=True)
+
+        # 4. Der Fan-Chart (Trichter)
+        st.plotly_chart(plot_monte_carlo_fan_chart(paths_a, start_capital, alpha_a, f"Simulationspfade ({lvl_a_name})"), use_container_width=True)
+
 
     with col_b:
-        st.subheader("Auswahl VaR-Level - B")
+        st.subheader("Szenario B")
         lvl_b_name = st.selectbox("VaR-Level B", list(var_levels_ui.keys()), key=f"sel_b_{days}", index=1, label_visibility="collapsed")
         alpha_b = var_levels_ui[lvl_b_name]
         
-        # Berechnungen B
+        # 1. Alle Berechnungen auf einmal durchführen (auch Monte Carlo)
         h_var_b, h_es_b = calculate_historical_risk(port_ret_log, start_capital, alpha_b, days)
         g_var_b, g_es_b = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_b, days)
         l_var_b, l_es_b = calculate_lognormal_risk(port_ret_log, start_capital, alpha_b, days)
+        mc_var_b, mc_es_b, final_vals_b, paths_b = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_b, days, simulations=2000)
         
-        st.write("---")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Historisch VaR", f"${h_var_b:,.0f}")
-        c1.metric("Historisch ES", f"${h_es_b:,.0f}")
-        c2.metric("Gaußsch VaR", f"${g_var_b:,.0f}")
-        c2.metric("Gaußsch ES", f"${g_es_b:,.0f}")
-        c3.metric("Lognormal VaR", f"${l_var_b:,.0f}")
-        c3.metric("Lognormal ES", f"${l_es_b:,.0f}")
+        # 2. Saubere Vergleichstabelle erstellen
+        df_b = pd.DataFrame({
+            "Methode": ["Historisch", "Gaußsch", "Lognormal", "Monte Carlo"],
+            "VaR ($)": [h_var_b, g_var_b, l_var_b, mc_var_b],
+            "ES ($)": [h_es_b, g_es_b, l_es_b, mc_es_b]
+        })
+        st.dataframe(df_b.style.format({"VaR ($)": "{:,.0f}", "ES ($)": "{:,.0f}"}), hide_index=True, use_container_width=True)
 
-    # Visualisierungen A und B
-    st.write("---")
-    col_chart_a, col_chart_b = st.columns(2)
-    
-    # Monte Carlo Sim für Charts
-    _, _, _, paths_a = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_a, days, simulations=2000)
-    _, _, _, paths_b = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_b, days, simulations=2000)
-    
-    with col_chart_a:
-        st.plotly_chart(plot_monte_carlo_fan_chart(paths_a, start_capital, alpha_a, f"Visualisierung VaR A ({lvl_a_name})"), use_container_width=True)
-    with col_chart_b:
-        st.plotly_chart(plot_monte_carlo_fan_chart(paths_b, start_capital, alpha_b, f"Visualisierung VaR B ({lvl_b_name})"), use_container_width=True)
+        # 3. Neues Histogramm: Verteilung der Monte-Carlo Endwerte
+        fig_hist_b = go.Figure()
+        fig_hist_b.add_trace(go.Histogram(x=final_vals_b, nbinsx=50, marker_color='#2c3e50', name="Endwerte"))
+        
+        # VaR und ES Linien einzeichnen
+        cutoff_var_b = start_capital + mc_var_b
+        cutoff_es_b = start_capital + mc_es_b
+        fig_hist_b.add_vline(x=cutoff_var_b, line_dash="dash", line_color="red", annotation_text="VaR")
+        fig_hist_b.add_vline(x=cutoff_es_b, line_dash="dot", line_color="orange", annotation_text="ES")
+        
+        fig_hist_b.update_layout(title=f"Verteilung der MC-Endwerte ({lvl_b_name})", template="plotly_dark", height=300, margin=dict(l=0, r=0, t=30, b=0))
+        st.plotly_chart(fig_hist_b, use_container_width=True)
 
-
+        # 4. Der Fan-Chart (Trichter)
+        st.plotly_chart(plot_monte_carlo_fan_chart(paths_b, start_capital, alpha_b, f"Simulationspfade ({lvl_b_name})"), use_container_width=True)
 # ==========================================
 # 6. STREAMLIT APP LAYOUT
 # ==========================================
@@ -334,15 +371,15 @@ with tab_uebersicht:
     
     st.write("---")
    
-mkt_returns = bench_world.pct_change().dropna()
-rf_returns = bench_rf.dropna() / 100 / 252 
-fig_hist = plot_historical_performance(
-    portfolio_returns = port_ret_discrete, 
-    market_returns = mkt_returns, 
-    risk_free_returns = rf_returns, 
-    start_capital = start_capital,
-    title = "MAG7 vs. Markt vs. Risikofreier Zins"
-)
+    mkt_returns = bench_world.pct_change().dropna()
+    rf_returns = bench_rf.dropna() / 100 / 252 
+    fig_hist = plot_historical_performance(
+     portfolio_returns = port_ret_discrete, 
+     market_returns = mkt_returns, 
+     risk_free_returns = rf_returns, 
+     start_capital = start_capital,
+     title = "Performance MAG7 vs. Markt vs. Risikofreier Zins (2012-2026)"
+ )
 st.plotly_chart(fig_hist, use_container_width=True)
 
 # ----------------- REITER 1, 2, 3: RISIKO-HORIZONTE -----------------
