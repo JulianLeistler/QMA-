@@ -5,205 +5,218 @@ import numpy as np
 import scipy.stats as stats
 import plotly.graph_objects as go
 import plotly.express as px
-from datetime import datetime
 
 # ==========================================
-# 1. PAGE CONFIG & STYLING
+# 1. PAGE CONFIG & DARK MODE STYLING
 # ==========================================
-st.set_page_config(page_title="MAG7 Risk Dashboard", layout="wide")
+st.set_page_config(page_title="MAG7 Risiko Dashboard", layout="wide")
 
-# Force Dark Mode Styling for Plotly and UI
 st.markdown("""
     <style>
     .main { background-color: #0e1117; color: white; }
     div[data-testid="stMetricValue"] { color: #00d4ff; }
+    section[data-testid="stSidebar"] { background-color: #161b22; }
     </style>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# 2. KONFIGURATION & PARAMETER
+# 2. KONFIGURATION (WIE IM PROJEKT)
 # ==========================================
 tickers = ['AAPL', 'TSLA', 'MSFT', 'META', 'AMZN', 'GOOGL', 'NVDA']
-benchmark_market = 'VT'
-benchmark_rf = '^TNX'
+benchmark_world_ticker = 'VT'
+benchmark_rf_ticker = '^TNX'
 start_date = "2012-05-18"
-end_date = "2024-04-01" # Basierend auf Projekt-Stand
+end_date = "2024-04-01"
 
 horizons = {"1 Jahr": 252, "5 Jahre": 1260, "10 Jahre": 2520, "20 Jahre": 5040}
-var_levels = {"1%": 0.01, "5%": 0.05, "10%": 0.10, "20%": 0.20}
+var_levels_ui = {"1%": 0.01, "5%": 0.05, "10%": 0.10, "20%": 0.20}
 
 # ==========================================
-# 3. DATA LOADING & PROCESSING
+# 3. DATA LOADING
 # ==========================================
 @st.cache_data
 def load_data():
-    all_tickers = tickers + [benchmark_market, benchmark_rf]
-    data = yf.download(all_tickers, start=start_date, end=end_date)['Adj Close']
+    all_assets = tickers + [benchmark_world_ticker, benchmark_rf_ticker]
+    # WICHTIG: 'Close' nutzen um KeyError 'Adj Close' zu vermeiden
+    raw_data = yf.download(all_assets, start=start_date, end=end_date, auto_adjust=False)['Close']
     
-    # Portfolio Returns (1/7 Weighting)
-    returns = data[tickers].pct_change().dropna()
+    # Renditen berechnen
+    returns_df = raw_data[tickers].pct_change().dropna()
     weights = np.array([1/7] * 7)
-    port_ret = returns.dot(weights)
+    port_ret = returns_df.dot(weights)
     port_ret_log = np.log(1 + port_ret)
     
-    # Benchmarks
-    mkt_ret = data[benchmark_market].pct_change().dropna()
-    rf_rate = data[benchmark_rf].mean() / 100 / 252 # Daily proxy
+    mkt_ret = raw_data[benchmark_world_ticker].pct_change().dropna()
+    rf_daily = (raw_data[benchmark_rf_ticker].mean() / 100) / 252
     
-    # Dotcom Crash Data for Black Swan (extracted from ^NDX 2000-2002 logic)
-    # Note: In a real app, we'd load this specifically. 
-    # Here we simulate the shock-vector based on your notebook logic.
+    # Black Swan Daten: Dotcom Crash (^NDX 2000-2002)
+    swan_data = yf.download("^NDX", start="2000-01-01", end="2002-12-31", auto_adjust=False)['Close']
+    swan_ret_log = np.log(swan_data / swan_data.shift(1)).dropna()
+    
+    return raw_data, port_ret, port_ret_log, mkt_ret, rf_daily, returns_df, swan_ret_log
+
+data, port_ret, port_ret_log, mkt_ret, rf_daily, ind_ret, swan_ret_log = load_data()
+
+# ==========================================
+# 4. RISIKO FUNKTIONEN (AUS DEM NOTEBOOK)
+# ==========================================
+def calculate_historical_risk(log_ret, capital, alpha, T):
+    hist_samples = []
     np.random.seed(42)
-    dotcom_shock = np.random.normal(-0.002, 0.025, 252) # Proxy für Crash-Renditen
+    for _ in range(2000):
+        start = np.random.randint(0, len(log_ret) - T)
+        path = log_ret.iloc[start:start+T].sum()
+        hist_samples.append(capital * (np.exp(path) - 1))
+    var = np.percentile(hist_samples, alpha * 100)
+    es = np.mean([s for s in hist_samples if s <= var])
+    return var, es
+
+def calculate_gaussian_risk(log_ret, capital, alpha, T):
+    mu = log_ret.mean()
+    sigma = log_ret.std()
+    z = stats.norm.ppf(alpha)
+    var = capital * (np.exp(mu * T + z * sigma * np.sqrt(T)) - 1)
+    es = capital * (np.exp(mu * T) * (stats.norm.cdf(z - sigma * np.sqrt(T)) / alpha) - 1)
+    return var, es
+
+def calculate_lognormal_risk(log_ret, capital, alpha, T):
+    # Bei Log-Renditen ist die Lognormal-Transformation praktisch identisch zur Gauss-Transformation 
+    # auf den Endwert, wird hier separat gehalten für die saubere Methodentrennung.
+    return calculate_gaussian_risk(log_ret, capital, alpha, T)
+
+def calculate_monte_carlo_risk(log_ret, capital, alpha, T, simulations=2000, black_swan=False, crash_data=None):
+    mu = log_ret.mean()
+    sigma = log_ret.std()
+    np.random.seed(42)
     
-    return data, port_ret, port_ret_log, mkt_ret, rf_rate, returns, dotcom_shock
-
-data, port_ret, port_ret_log, mkt_ret, rf_rate, individual_returns, dotcom_shock = load_data()
-
-# ==========================================
-# 4. SIDEBAR
-# ==========================================
-st.sidebar.header("Navigation & Settings")
-start_capital = st.sidebar.number_input("Startkapital ($)", value=100000, step=1000)
-st.sidebar.info("Portfolio: Magnificent 7 (Gleichgewichtet 1/7)")
-
-# ==========================================
-# 5. TABS SETUP
-# ==========================================
-tab_summary, tab_risk, tab_swan = st.tabs([
-    "📈 Executive Summary & Performance", 
-    "🛡️ Risiko-Deep-Dive (VaR/ES)", 
-    "🦢 Black Swan Stresstest"
-])
-
-# ==========================================
-# TAB 1: EXECUTIVE SUMMARY
-# ==========================================
-with tab_summary:
-    st.title("MAG7 Portfolio Performance")
+    sim_returns = np.random.normal(mu, sigma, (T, simulations))
     
-    # --- KPI Calculation ---
-    excess_ret = port_ret - rf_rate
-    beta = np.cov(port_ret, mkt_ret[port_ret.index])[0,1] / np.var(mkt_ret)
-    sharpe = np.sqrt(252) * excess_ret.mean() / port_ret.std()
-    treynor = (excess_ret.mean() * 252) / beta
+    if black_swan and crash_data is not None:
+        # Ersetze ca. 25% der Pfade mit dem historischen Crash-Verlauf
+        num_crashes = int(simulations * 0.25)
+        # Crash Data samplen
+        crash_sample = crash_data.sample(T, replace=True).values
+        for i in range(num_crashes):
+            sim_returns[:, i] = crash_sample
+            
+    paths = capital * np.exp(np.cumsum(sim_returns, axis=0))
+    final_returns = paths[-1, :] - capital
     
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Beta (vs. VT)", f"{beta:.2f}")
-    col2.metric("Sharpe Ratio", f"{sharpe:.2f}")
-    col3.metric("Treynor Ratio", f"{treynor:.2f}")
-    col4.metric("Annual. Return", f"{(port_ret.mean()*252)*100:.1f}%")
+    var = np.percentile(final_returns, alpha * 100)
+    es = np.mean(final_returns[final_returns <= var])
+    return var, es, final_returns, paths
 
-    # --- Historical Performance Plot ---
-    st.subheader("Kumulierte Performance vs. Benchmarks")
-    cum_port = (1 + port_ret).cumprod() * start_capital
-    cum_mkt = (1 + mkt_ret[port_ret.index]).cumprod() * start_capital
+# ==========================================
+# 5. UI LAYOUT & TABS
+# ==========================================
+st.sidebar.title("Dashboard Steuerung")
+start_capital = st.sidebar.number_input("Startkapital ($)", value=100000, step=5000)
+
+tab1, tab2, tab3 = st.tabs(["📊 Übersicht & Performance", "🛡️ Risiko-Analyse (VaR/ES)", "🦢 Black Swan Stresstest"])
+
+# --- TAB 1: ÜBERSICHT ---
+with tab1:
+    st.header("Executive Summary")
     
+    # KPIs
+    common_idx = port_ret.index.intersection(mkt_ret.index)
+    beta = np.cov(port_ret.loc[common_idx], mkt_ret.loc[common_idx])[0, 1] / np.var(mkt_ret.loc[common_idx])
+    excess_ret = port_ret.mean() - rf_daily
+    sharpe = (excess_ret * 252) / (port_ret.std() * np.sqrt(252))
+    treynor = (excess_ret * 252) / beta
+    
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Beta (vs. VT)", f"{beta:.2f}")
+    c2.metric("Sharpe Ratio", f"{sharpe:.2f}")
+    c3.metric("Treynor Ratio", f"{treynor:.2f}")
+    c4.metric("Anual. Rendite", f"{(port_ret.mean()*252*100):.1f}%")
+    
+    # Performance Plot
+    st.subheader("Kumulierte Performance")
     fig_perf = go.Figure()
-    fig_perf.add_trace(go.Scatter(x=cum_port.index, y=cum_port, name="MAG7 Portfolio", line=dict(color="#00d4ff", width=2)))
-    fig_perf.add_trace(go.Scatter(x=cum_mkt.index, y=cum_mkt, name="Markt (VT)", line=dict(color="gray", dash='dash')))
-    fig_perf.update_layout(template="plotly_dark", hovermode="x unified", height=400)
+    fig_perf.add_trace(go.Scatter(x=port_ret.index, y=(1+port_ret).cumprod()*start_capital, name="MAG7 Portfolio", line=dict(color="#00d4ff")))
+    fig_perf.add_trace(go.Scatter(x=mkt_ret.index, y=(1+mkt_ret).cumprod()*start_capital, name="Markt (VT)", line=dict(color="gray", dash="dash")))
+    fig_perf.update_layout(template="plotly_dark", height=400, hovermode="x unified")
     st.plotly_chart(fig_perf, use_container_width=True)
-
-    # --- Correlation Matrix (Neu integriert) ---
-    st.subheader("MAG7 Korrelationsmatrix (Log-Renditen)")
-    corr_matrix = individual_returns.corr()
-    fig_corr = px.imshow(
-        corr_matrix, 
-        text_auto=".2f", 
-        color_continuous_scale='RdBu_r', 
-        aspect="auto",
-        labels=dict(color="Korrelation")
-    )
-    fig_corr.update_layout(template="plotly_dark", height=450)
+    
+    # Korrelation
+    st.subheader("MAG7 Korrelationsmatrix")
+    fig_corr = px.imshow(ind_ret.corr(), text_auto=".2f", color_continuous_scale="RdBu_r")
+    fig_corr.update_layout(template="plotly_dark", height=500)
     st.plotly_chart(fig_corr, use_container_width=True)
 
-# ==========================================
-# TAB 2: RISIKO-DEEP-DIVE
-# ==========================================
-with tab_risk:
-    st.title("Value at Risk & Expected Shortfall")
+# --- TAB 2: RISIKO-ANALYSE ---
+with tab2:
+    st.header("Modellgestützte Risiko-Einschätzung")
     
-    c1, c2 = st.columns(2)
-    horizon_name = c1.selectbox("Anlagehorizont", list(horizons.keys()))
-    alpha_name = c2.selectbox("Konfidenzniveau (Alpha)", list(var_levels.keys()))
+    col_a, col_b = st.columns(2)
+    sel_h = col_a.selectbox("Anlagehorizont", list(horizons.keys()))
+    sel_v = col_b.selectbox("VaR-Konfidenz", list(var_levels_ui.keys()))
     
-    T = horizons[horizon_name]
-    alpha = var_levels[alpha_name]
+    T = horizons[sel_h]
+    alpha = var_levels_ui[sel_v]
     
-    # --- Simulation Logik (2.000 Pfade) ---
-    mu = port_ret_log.mean()
-    sigma = port_ret_log.std()
+    # Berechnungen aufrufen
+    var_hist, es_hist = calculate_historical_risk(port_ret_log, start_capital, alpha, T)
+    var_gauss, es_gauss = calculate_gaussian_risk(port_ret_log, start_capital, alpha, T)
+    var_log, es_log = calculate_lognormal_risk(port_ret_log, start_capital, alpha, T)
+    var_mc, es_mc, mc_rets, mc_paths = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha, T)
     
-    np.random.seed(42)
-    sim_returns = np.random.normal(mu, sigma, (T, 2000))
-    price_paths = start_capital * np.exp(np.cumsum(sim_returns, axis=0))
-    ending_values = price_paths[-1, :]
-    returns_at_T = (ending_values - start_capital)
+    # Tabelle anzeigen
+    res_data = {
+        "Methode": ["Historisch", "Gaußsch", "Lognormal", "Monte Carlo"],
+        "VaR ($)": [var_hist, var_gauss, var_log, var_mc],
+        "ES ($)": [es_hist, es_gauss, es_log, es_mc]
+    }
+    df_res = pd.DataFrame(res_data)
+    st.table(df_res.style.format({"VaR ($)": "{:,.0f}", "ES ($)": "{:,.0f}"}))
     
-    var_mc = np.percentile(returns_at_T, alpha * 100)
-    es_mc = returns_at_T[returns_at_T <= var_mc].mean()
+    # Verteilung
+    st.subheader(f"Verteilung der Endwerte (Monte Carlo - {sel_h})")
+    fig_hist = go.Figure()
+    fig_hist.add_trace(go.Histogram(x=mc_rets + start_capital, nbinsx=50, name="Verteilung", marker_color='#2c3e50'))
+    fig_hist.add_vline(x=start_capital + var_mc, line_dash="dash", line_color="red", annotation_text="VaR")
+    fig_hist.add_vline(x=start_capital + es_mc, line_dash="dot", line_color="orange", annotation_text="ES")
+    fig_hist.update_layout(template="plotly_dark", height=400)
+    st.plotly_chart(fig_hist, use_container_width=True)
 
-    # --- Metrics ---
+# --- TAB 3: BLACK SWAN ---
+with tab3:
+    st.header("Stresstest: Dotcom-Szenario")
+    st.info("Simulation eines schweren Marktschocks basierend auf den Nasdaq-Renditen der Jahre 2000-2002.")
+    
+    days_swan = horizons["1 Jahr"] # Fester Horizont für Stresstest
+    swan_lvl_name = st.selectbox("Auswahl VaR-Level für Stresstest", list(var_levels_ui.keys()), key="var_swan")
+    alpha_swan = var_levels_ui[swan_lvl_name]
+    
+    mc_var_norm, mc_es_norm, _, paths_norm = calculate_monte_carlo_risk(
+        port_ret_log, start_capital, alpha_swan, days_swan, simulations=2000, black_swan=False
+    )
+    mc_var_swan, mc_es_swan, _, paths_swan = calculate_monte_carlo_risk(
+        port_ret_log, start_capital, alpha_swan, days_swan, simulations=2000, black_swan=True, crash_data=swan_ret_log
+    )
+    
     st.write("---")
-    m1, m2, m3 = st.columns(3)
-    m1.metric(f"VaR MC ({alpha_name})", f"${abs(var_mc):,.0f}")
-    m2.metric(f"ES MC ({alpha_name})", f"${abs(es_mc):,.0f}")
-    m3.metric("Median Endwert", f"${np.median(ending_values):,.0f}")
-
-    # --- Distribution Plot ---
-    fig_dist = go.Figure()
-    fig_dist.add_trace(go.Histogram(x=returns_at_T, nbinsx=50, name="Verteilung", marker_color='#2c3e50'))
-    fig_dist.add_vline(x=var_mc, line_dash="dash", line_color="red", annotation_text="VaR")
-    fig_dist.add_vline(x=es_mc, line_dash="dot", line_color="orange", annotation_text="ES")
-    fig_dist.update_layout(template="plotly_dark", title=f"Verteilung der Portfolio-Ergebnisse nach {horizon_name}", height=400)
-    st.plotly_chart(fig_dist, use_container_width=True)
-
-    # --- Fan Chart ---
-    st.subheader("Simulierte Pfade (Monte Carlo Trichter)")
-    steps = np.arange(T)
-    median_path = np.median(price_paths, axis=1)
-    upper_95 = np.percentile(price_paths, 95, axis=1)
-    lower_5 = np.percentile(price_paths, 5, axis=1)
-
-    fig_fan = go.Figure()
-    fig_fan.add_trace(go.Scatter(x=steps, y=upper_95, fill=None, mode='lines', line_color='rgba(0,212,255,0.1)', name="95% Quantil"))
-    fig_fan.add_trace(go.Scatter(x=steps, y=lower_5, fill='tonexty', mode='lines', line_color='rgba(0,212,255,0.1)', name="5% Quantil"))
-    fig_fan.add_trace(go.Scatter(x=steps, y=median_path, line=dict(color="#00d4ff", width=3), name="Median Pfad"))
-    fig_fan.update_layout(template="plotly_dark", xaxis_title="Tage", yaxis_title="Portfolio Wert ($)", height=450)
-    st.plotly_chart(fig_fan, use_container_width=True)
-
-# ==========================================
-# TAB 3: BLACK SWAN
-# ==========================================
-with tab_swan:
-    st.title("🦢 Black Swan Szenario")
-    st.warning("Simulation basierend auf dem Dotcom-Crash Schock-Profil.")
-
-    # Simulation mit Crash-Überlagerung
-    np.random.seed(42)
-    # Wir nehmen 1 Jahr (252 Tage) für den Stress-Test
-    normal_sim = np.random.normal(mu, sigma, (252, 2000))
-    # Black Swan: Wir mischen die historischen Crash-Renditen unter
-    swan_sim = normal_sim.copy()
-    swan_sim[:, :500] = dotcom_shock.reshape(-1, 1) # 25% der Pfade erleiden den Crash
+    c1, c2 = st.columns(2)
+    c1.subheader("Ohne Black Swan ('Normal')")
+    c1.metric("VaR ($)", f"${mc_var_norm:,.0f}")
+    c1.metric("ES ($)", f"${mc_es_norm:,.0f}")
     
-    path_normal = start_capital * np.exp(np.cumsum(normal_sim, axis=0))
-    path_swan = start_capital * np.exp(np.cumsum(swan_sim, axis=0))
+    c2.subheader("Mit Black Swan")
+    c2.metric("VaR ($)", f"${mc_var_swan:,.0f}")
+    c2.metric("ES ($)", f"${mc_es_swan:,.0f}")
+
+    st.write("---")
+    st.subheader("Pfad-Visualisierung: Normal vs. Black Swan")
     
     fig_swan = go.Figure()
-    # Normal Pfade (Grau)
-    for i in range(10): # Nur 10 zur Übersichtlichkeit
-        fig_swan.add_trace(go.Scatter(y=path_normal[:, i], line=dict(color='rgba(255,255,255,0.1)', width=1), showlegend=False))
+    # Zeichne ein paar normale Pfade (Grau)
+    for i in range(10):
+        fig_swan.add_trace(go.Scatter(y=paths_norm[:, i], line=dict(color='rgba(255,255,255,0.1)'), showlegend=False))
     
-    # Crash Pfad (Rot)
-    fig_swan.add_trace(go.Scatter(y=path_swan[:, 0], line=dict(color='red', width=3), name="Black Swan Pfad"))
+    # Zeichne den schlimmsten Swan-Pfad (Rot)
+    worst_swan_idx = np.argmin(paths_swan[-1, :])
+    fig_swan.add_trace(go.Scatter(y=paths_swan[:, worst_swan_idx], name="Worst-Case Black Swan Pfad", line=dict(color='red', width=3)))
     
-    fig_swan.update_layout(template="plotly_dark", title="Portfolio-Erosion im Black Swan Szenario", xaxis_title="Tage", yaxis_title="Wert ($)")
+    fig_swan.update_layout(template="plotly_dark", yaxis_title="Portfolio Wert ($)", xaxis_title="Tage (1 Jahr Horizont)", height=450)
     st.plotly_chart(fig_swan, use_container_width=True)
-    
-    st.write("""
-    **Interpretation:** Im Black Swan Szenario werden die Renditen des Portfolios durch eine Schock-Komponente ersetzt, 
-    die dem Einbruch des Nasdaq während der Dotcom-Blase nachempfunden ist. Man sieht deutlich, wie der Drift 
-    der MAG7-Aktien durch die hohe Volatilität und den negativen Bias des Crashs komplett neutralisiert wird.
-    """)
