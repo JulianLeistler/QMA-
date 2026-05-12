@@ -266,66 +266,6 @@ def plot_black_swan_comparison(paths_normal, paths_swan, start_cap, title="Media
     fig.update_layout(title=title, xaxis_title="Handelstage", yaxis_title="Portfolio-Wert ($)", template="plotly_dark", hovermode="x unified", margin=dict(l=20, r=20, t=50, b=20), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
     return fig
 
-def create_var_method_comparison_plot(core_results, horizons):
-    # Konfidenz-Level automatisch aus den Daten auslesen und sortieren
-    confidence_levels = sorted(core_results['Konfidenz'].unique())
-
-    # Subplots basierend auf der Anzahl der Konfidenz-Level erstellen
-    fig_p2 = make_subplots(
-        rows=1, cols=len(confidence_levels), 
-        subplot_titles=[f"{c} Konfidenz" for c in confidence_levels]
-    )
-
-    # Angepasst an die Ausgabe deiner get_comparison_data() Funktion
-    plot_methods = ["Historisch", "Gaußsch", "Lognormal (MC)"]
-    method_colors = {
-        "Historisch": 'rgb(52, 152, 219)',
-        "Gaußsch": 'rgb(231, 76, 60)',
-        "Lognormal (MC)": 'rgb(46, 204, 113)',
-    }
-
-    horizon_order = list(horizons.keys())
-    
-    for col_idx, conf_label in enumerate(confidence_levels, start=1):
-        subset = core_results[core_results['Konfidenz'] == conf_label]
-        seen = set()
-        
-        for method in plot_methods:
-            method_data = subset[subset['Methode'] == method]
-            if method_data.empty:
-                continue
-                
-            # x-Reihenfolge nach horizon_order sortieren
-            method_data = method_data.set_index('Horizont').reindex(horizon_order).reset_index()
-            
-            # Legende nur im ersten Subplot anzeigen
-            show_legend = (method not in seen) and (col_idx == 1)
-            seen.add(method)
-            
-            fig_p2.add_trace(
-                go.Bar(
-                    x=method_data['Horizont'],
-                    y=method_data['VaR ($)'],
-                    name=method,
-                    marker_color=method_colors.get(method, 'gray'),
-                    showlegend=show_legend,
-                ),
-                row=1, col=col_idx,
-            )
-            
-        fig_p2.update_yaxes(title_text='VaR (USD)', row=1, col=col_idx)
-        fig_p2.update_xaxes(title_text='Horizont', row=1, col=col_idx)
-
-    fig_p2.update_layout(
-        template='plotly_dark',
-        title='Methodenvergleich – VaR über Horizonte und Konfidenz',
-        barmode='group',
-        height=500,
-        margin=dict(l=20, r=20, t=80, b=20)
-    )
-    
-    return fig_p2
-
 # ==========================================
 # 5. UI HELPER FUNCTION
 # ==========================================
@@ -336,8 +276,8 @@ def render_risk_tab(days, tab_title):
     col_a, col_b = st.columns(2)
     
     with col_a:
-        st.subheader("Szenario A")
-        lvl_a_name = st.selectbox("VaR-Level A", list(var_levels_ui.keys()), key=f"sel_a_{days}")
+        st.subheader("Auswahl VaR-Level - A")
+        lvl_a_name = st.selectbox("VaR-Level A", list(var_levels_ui.keys()), key=f"sel_a_{days}", label_visibility="collapsed")
         alpha_a = var_levels_ui[lvl_a_name]
         
         # Berechnungen A
@@ -345,21 +285,18 @@ def render_risk_tab(days, tab_title):
         g_var_a, g_es_a = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_a, days)
         l_var_a, l_es_a = calculate_lognormal_risk(port_ret_log, start_capital, alpha_a, days)
         
-        st.markdown("##### Ergebnisse (Value at Risk & Expected Shortfall)")
+        st.write("---")
         c1, c2, c3 = st.columns(3)
-        # Wir zeigen den absoluten Wert und als "Delta" (klein darunter) den Prozentwert vom Startkapital
-        c1.metric("Historisch VaR", f"${abs(h_var_a):,.0f}", f"{(h_var_a/start_capital)*100:.2f} %", delta_color="inverse")
-        c1.metric("Historisch ES", f"${abs(h_es_a):,.0f}", f"{(h_es_a/start_capital)*100:.2f} %", delta_color="inverse")
-        
-        c2.metric("Gaußsch VaR", f"${abs(g_var_a):,.0f}", f"{(g_var_a/start_capital)*100:.2f} %", delta_color="inverse")
-        c2.metric("Gaußsch ES", f"${abs(g_es_a):,.0f}", f"{(g_es_a/start_capital)*100:.2f} %", delta_color="inverse")
-        
-        c3.metric("Lognormal VaR", f"${abs(l_var_a):,.0f}", f"{(l_var_a/start_capital)*100:.2f} %", delta_color="inverse")
-        c3.metric("Lognormal ES", f"${abs(l_es_a):,.0f}", f"{(l_es_a/start_capital)*100:.2f} %", delta_color="inverse")
+        c1.metric("Historisch VaR", f"${h_var_a:,.0f}")
+        c1.metric("Historisch ES", f"${h_es_a:,.0f}")
+        c2.metric("Gaußsch VaR", f"${g_var_a:,.0f}")
+        c2.metric("Gaußsch ES", f"${g_es_a:,.0f}")
+        c3.metric("Lognormal VaR", f"${l_var_a:,.0f}")
+        c3.metric("Lognormal ES", f"${l_es_a:,.0f}")
 
     with col_b:
-        st.subheader("Szenario B")
-        lvl_b_name = st.selectbox("VaR-Level B", list(var_levels_ui.keys()), key=f"sel_b_{days}", index=1)
+        st.subheader("Auswahl VaR-Level - B")
+        lvl_b_name = st.selectbox("VaR-Level B", list(var_levels_ui.keys()), key=f"sel_b_{days}", index=1, label_visibility="collapsed")
         alpha_b = var_levels_ui[lvl_b_name]
         
         # Berechnungen B
@@ -367,43 +304,28 @@ def render_risk_tab(days, tab_title):
         g_var_b, g_es_b = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_b, days)
         l_var_b, l_es_b = calculate_lognormal_risk(port_ret_log, start_capital, alpha_b, days)
         
-        st.markdown("##### Ergebnisse (Value at Risk & Expected Shortfall)")
+        st.write("---")
         c1, c2, c3 = st.columns(3)
-        c1.metric("Historisch VaR", f"${abs(h_var_b):,.0f}", f"{(h_var_b/start_capital)*100:.2f} %", delta_color="inverse")
-        c1.metric("Historisch ES", f"${abs(h_es_b):,.0f}", f"{(h_es_b/start_capital)*100:.2f} %", delta_color="inverse")
-        
-        c2.metric("Gaußsch VaR", f"${abs(g_var_b):,.0f}", f"{(g_var_b/start_capital)*100:.2f} %", delta_color="inverse")
-        c2.metric("Gaußsch ES", f"${abs(g_es_b):,.0f}", f"{(g_es_b/start_capital)*100:.2f} %", delta_color="inverse")
-        
-        c3.metric("Lognormal VaR", f"${abs(l_var_b):,.0f}", f"{(l_var_b/start_capital)*100:.2f} %", delta_color="inverse")
-        c3.metric("Lognormal ES", f"${abs(l_es_b):,.0f}", f"{(l_es_b/start_capital)*100:.2f} %", delta_color="inverse")
+        c1.metric("Historisch VaR", f"${h_var_b:,.0f}")
+        c1.metric("Historisch ES", f"${h_es_b:,.0f}")
+        c2.metric("Gaußsch VaR", f"${g_var_b:,.0f}")
+        c2.metric("Gaußsch ES", f"${g_es_b:,.0f}")
+        c3.metric("Lognormal VaR", f"${l_var_b:,.0f}")
+        c3.metric("Lognormal ES", f"${l_es_b:,.0f}")
 
     # Visualisierungen A und B
     st.write("---")
     col_chart_a, col_chart_b = st.columns(2)
     
-    # Monte Carlo Sim für Charts (Lade-Indikator hinzufügen, da 10k Sims dauern können)
-    with st.spinner('Berechne Monte Carlo Simulationen...'):
-        _, _, _, paths_a = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_a, days, simulations=2000)
-        _, _, _, paths_b = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_b, days, simulations=2000)
+    # Monte Carlo Sim für Charts
+    _, _, _, paths_a = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_a, days, simulations=2000)
+    _, _, _, paths_b = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_b, days, simulations=2000)
     
     with col_chart_a:
-        st.plotly_chart(plot_monte_carlo_fan_chart(paths_a, start_capital, alpha_a, f"Monte Carlo Fan-Chart ({lvl_a_name})"), use_container_width=True)
+        st.plotly_chart(plot_monte_carlo_fan_chart(paths_a, start_capital, alpha_a, f"Visualisierung VaR A ({lvl_a_name})"), use_container_width=True)
     with col_chart_b:
-        st.plotly_chart(plot_monte_carlo_fan_chart(paths_b, start_capital, alpha_b, f"Monte Carlo Fan-Chart ({lvl_b_name})"), use_container_width=True)
         st.plotly_chart(plot_monte_carlo_fan_chart(paths_b, start_capital, alpha_b, f"Visualisierung VaR B ({lvl_b_name})"), use_container_width=True)
-# ==========================================
-# 6. STREAMLIT APP LAYOUT
-# ==========================================
 
-# Sidebar
-st.sidebar.title("Magnificent 7: Risiko - Dashboard")
-start_capital = st.sidebar.number_input("Startkapital ($)", value=100_000, step=10_000)
-
-# Tabs
-tab_uebersicht, tab_1y, tab_5y, tab_10y, tab_black_swan = st.tabs([
-    "Übersicht", "1-Jahres-Risiko", "5-Jahres-Risiko", "10-Jahres-Risiko", "Black-Swan-Sim"
-])
 
 # ----------------- REITER 0: ÜBERSICHT -----------------
 with tab_uebersicht:
