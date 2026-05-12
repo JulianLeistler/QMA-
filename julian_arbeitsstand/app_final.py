@@ -572,14 +572,13 @@ with tab_methoden:
     # ==========================
     # TEIL 1: BALKENDIAGRAMM (PLOT 1)
     # ==========================
-    st.subheader("1. Übersicht über alle Anlagehorizonte")
+    st.subheader("Übersicht über alle Anlagehorizonte")
     col_bar_1, col_bar_2 = st.columns(2)
     
     with col_bar_1:
-        # Hier kann der Nutzer auswählen, welche beiden Level er vergleichen will
-        lvl_1_name = st.selectbox("Linker Plot (Konfidenz)", list(var_levels_ui.keys()), index=1, key="bar_lvl_1")
+        lvl_1_name = st.selectbox("Auswahl VaR-Level A", list(var_levels_ui.keys()), index=1, key="bar_lvl_1")
     with col_bar_2:
-        lvl_2_name = st.selectbox("Rechter Plot (Konfidenz)", list(var_levels_ui.keys()), index=0, key="bar_lvl_2")
+        lvl_2_name = st.selectbox("Auswahl VaR-Level B", list(var_levels_ui.keys()), index=0, key="bar_lvl_2")
         
     # Daten generieren. Wir passen die Namen an, damit sie zur Logik von get_comparison_data passen (95 % statt 5 %)
     conf_1_label = f"{int((1 - var_levels_ui[lvl_1_name]) * 100)} %"
@@ -597,7 +596,7 @@ with tab_methoden:
     # ==========================
     # TEIL 2: DICHTEVERTEILUNG (PLOT C)
     # ==========================
-    st.subheader("2. Dichteverteilung & VaR-Schwellen")
+    st.subheader("Dichteverteilung & VaR-Schwellen")
     
     col_dens_1, col_dens_2 = st.columns(2)
     with col_dens_1:
