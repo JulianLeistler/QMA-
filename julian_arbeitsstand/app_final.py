@@ -266,6 +266,139 @@ def plot_black_swan_comparison(paths_normal, paths_swan, start_cap, title="Media
     fig.update_layout(title=title, xaxis_title="Handelstage", yaxis_title="Portfolio-Wert ($)", template="plotly_dark", hovermode="x unified", margin=dict(l=20, r=20, t=50, b=20), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
     return fig
 
+def plot_var_bar_comparison(df_comparison, horizons, levels_to_show):
+    """Erstellt Plot 1 (Balken) für die vom Nutzer ausgewählten VaR-Level."""
+    plot_methods = ['Historisch', 'Gaußsch', 'Lognormal (MC)']
+    method_colors = {
+        'Historisch': 'rgb(52, 152, 219)',
+        'Gaußsch': 'rgb(231, 76, 60)',
+        'Lognormal (MC)': 'rgb(46, 204, 113)',
+    }
+
+    # Subplots dynamisch nach Anzahl der ausgewählten Level
+    fig_p2 = make_subplots(
+        rows=1, cols=len(levels_to_show), 
+        subplot_titles=[f"{lvl} Konfidenz" for lvl in levels_to_show]
+    )
+
+    horizon_order = list(horizons.keys())
+    
+    for col_idx, conf_label in enumerate(levels_to_show, start=1):
+        subset = df_comparison[df_comparison['Konfidenz'] == conf_label]
+        seen = set()
+        
+        for method in plot_methods:
+            method_data = subset[subset['Methode'] == method]
+            if method_data.empty:
+                continue
+                
+            # x-Reihenfolge erzwingen
+            method_data = method_data.set_index('Horizont').reindex(horizon_order).reset_index()
+            
+            show_legend = (method not in seen) and (col_idx == 1)
+            seen.add(method)
+            
+            fig_p2.add_trace(
+                go.Bar(
+                    x=method_data['Horizont'],
+                    y=method_data['VaR ($)'],
+                    name=method,
+                    marker_color=method_colors.get(method, 'gray'),
+                    showlegend=show_legend,
+                ),
+                row=1, col=col_idx,
+            )
+            
+        fig_p2.update_yaxes(title_text='VaR (USD)', row=1, col=col_idx)
+        fig_p2.update_xaxes(title_text='Horizont', row=1, col=col_idx)
+
+    fig_p2.update_layout(
+        template='plotly_dark',
+        title='Methodenvergleich – Value at Risk (Absolut)',
+        barmode='group',
+        height=500,
+        margin=dict(t=80, b=20, l=20, r=20)
+    )
+    return fig_p2
+
+
+def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, start_capital, days, horizon_label, alpha):
+    """Erstellt Plot C (Dichte) dynamisch basierend auf Horizont und VaR-Level."""
+    
+    # 1. Historisch: rollierende P&L
+    if days == 1:
+        rolling_log_C = portfolio_returns_log.dropna()
+    else:
+        rolling_log_C = portfolio_returns_log.rolling(window=days).sum().dropna()
+    
+    hist_pnl_C = ((np.exp(rolling_log_C) - 1) * start_capital).values
+
+    # 2. Gauss: analytische Dichte ueber denselben x-Bereich
+    clean_disc = portfolio_returns_discrete.dropna()
+    mu_g = clean_disc.mean() * days
+    sigma_g = clean_disc.std() * np.sqrt(days)
+
+    # 3. Lognormal MC: Endwerte ziehen, in PnL umrechnen (2000 Sims für UI-Geschwindigkeit)
+    _, _, final_values_C, _ = calculate_monte_carlo_risk(
+        portfolio_returns_log, start_capital, alpha, days,
+        simulations=2000, black_swan=False,
+    )
+    mc_pnl_C = final_values_C - start_capital
+
+    # Gemeinsames x-Grid
+    x_lo = float(min(hist_pnl_C.min(), mc_pnl_C.min(), (mu_g - 4*sigma_g)*start_capital))
+    x_hi = float(max(hist_pnl_C.max(), mc_pnl_C.max(), (mu_g + 4*sigma_g)*start_capital))
+    x_grid_C = np.linspace(x_lo, x_hi, 500)
+
+    # KDEs fuer Hist und MC
+    kde_hist = stats.gaussian_kde(hist_pnl_C)
+    kde_mc = stats.gaussian_kde(mc_pnl_C)
+    density_hist = kde_hist(x_grid_C)
+    density_mc = kde_mc(x_grid_C)
+
+    # Gauss-Dichte
+    gauss_density = stats.norm.pdf(x_grid_C / start_capital, loc=mu_g, scale=sigma_g) / start_capital
+
+    # VaR-Linien berechnen
+    var_hist_C, _ = calculate_historical_risk(portfolio_returns_log, start_capital, alpha, days)
+    var_gauss_C, _ = calculate_gaussian_risk(portfolio_returns_discrete, start_capital, alpha, days)
+    var_mc_C = float(np.percentile(mc_pnl_C, alpha * 100))
+
+    fig_pC = go.Figure()
+    fig_pC.add_trace(go.Scatter(
+        x=x_grid_C, y=density_hist, mode='lines',
+        line=dict(color='rgb(52, 152, 219)', width=2.2), name='Historisch'
+    ))
+    fig_pC.add_trace(go.Scatter(
+        x=x_grid_C, y=gauss_density, mode='lines',
+        line=dict(color='rgb(231, 76, 60)', width=2.2), name='Gaußsch (Analytisch)'
+    ))
+    fig_pC.add_trace(go.Scatter(
+        x=x_grid_C, y=density_mc, mode='lines',
+        line=dict(color='rgb(46, 204, 113)', width=2.2), name='Lognormal (MC)'
+    ))
+    
+    # Vertikale VaR-Linien
+    fig_pC.add_vline(x=var_hist_C, line=dict(color='rgb(52, 152, 219)', width=1.5, dash='dash'),
+                     annotation_text=f"VaR Hist: {var_hist_C:,.0f}", annotation_position='top left')
+    fig_pC.add_vline(x=var_gauss_C, line=dict(color='rgb(231, 76, 60)', width=1.5, dash='dash'),
+                     annotation_text=f"VaR Gauß: {var_gauss_C:,.0f}", annotation_position='top')
+    fig_pC.add_vline(x=var_mc_C, line=dict(color='rgb(46, 204, 113)', width=1.5, dash='dash'),
+                     annotation_text=f"VaR MC: {var_mc_C:,.0f}", annotation_position='top right')
+
+    # Konfidenz-String für den Titel erstellen (z.B. aus 0.05 wird 95)
+    conf_str = f"{(1-alpha)*100:.0f}"
+
+    fig_pC.update_layout(
+        template='plotly_dark',
+        title=f'Verteilungs- und Methodenvergleich ({horizon_label}) – {conf_str} % Konfidenz',
+        xaxis_title='Gewinn/Verlust (USD)',
+        yaxis_title='Wahrscheinlichkeitsdichte',
+        height=520,
+        hovermode='x unified'
+    )
+    return fig_pC
+
 # ==========================================
 # 5. UI HELPER FUNCTION
 # ==========================================
@@ -336,7 +469,7 @@ start_capital = st.sidebar.number_input("Startkapital ($)", value=100_000, step=
 
 # Tabs
 tab_uebersicht, tab_1y, tab_5y, tab_10y, tab_black_swan = st.tabs([
-    "Übersicht", "1-Jahres-Risiko", "5-Jahres-Risiko", "10-Jahres-Risiko", "Black-Swan-Sim"
+    "Übersicht", "1-Jahres-Risiko", "5-Jahres-Risiko", "10-Jahres-Risiko", "Black-Swan-Sim","Methodenvergleich"
 ])
 
 # ----------------- REITER 0: ÜBERSICHT -----------------
@@ -412,3 +545,65 @@ with tab_black_swan:
         st.plotly_chart(plot_monte_carlo_fan_chart(paths_norm, start_capital, alpha_swan, "Visualisierung Ohne Blackswan"), use_container_width=True)
     with col_chart2:
         st.plotly_chart(plot_monte_carlo_fan_chart(paths_swan, start_capital, alpha_swan, "Visualisierung Black Swan"), use_container_width=True)
+
+
+# ----------------- REITER 5: METHODENVERGLEICH -----------------
+with tab_methoden:
+    st.header("Methodenvergleich: Historisch vs. Gaußsch vs. Lognormal")
+    st.info("Dieser Tab beleuchtet die Unterschiede in den Berechnungsmodellen. Während die historische und Lognormal-Methode 'Fat Tails' (extreme Ränder) besser abbilden können, unterschätzt die Gauß-Verteilung diese häufig.")
+    
+    st.write("---")
+    
+    # ==========================
+    # TEIL 1: BALKENDIAGRAMM (PLOT 1)
+    # ==========================
+    st.subheader("1. Übersicht über alle Anlagehorizonte")
+    col_bar_1, col_bar_2 = st.columns(2)
+    
+    with col_bar_1:
+        # Hier kann der Nutzer auswählen, welche beiden Level er vergleichen will
+        lvl_1_name = st.selectbox("Linker Plot (Konfidenz)", list(var_levels_ui.keys()), index=1, key="bar_lvl_1")
+    with col_bar_2:
+        lvl_2_name = st.selectbox("Rechter Plot (Konfidenz)", list(var_levels_ui.keys()), index=0, key="bar_lvl_2")
+        
+    # Daten generieren. Wir passen die Namen an, damit sie zur Logik von get_comparison_data passen (95 % statt 5 %)
+    conf_1_label = f"{int((1 - var_levels_ui[lvl_1_name]) * 100)} %"
+    conf_2_label = f"{int((1 - var_levels_ui[lvl_2_name]) * 100)} %"
+    
+    df_comp = get_comparison_data(port_ret_log, port_ret_discrete, start_capital)
+    
+    # Plot 1 zeichnen
+    fig_bar = plot_var_bar_comparison(df_comp, horizons, levels_to_show=[conf_1_label, conf_2_label])
+    st.plotly_chart(fig_bar, use_container_width=True)
+
+
+    st.write("---")
+
+    # ==========================
+    # TEIL 2: DICHTEVERTEILUNG (PLOT C)
+    # ==========================
+    st.subheader("2. Dichteverteilung & VaR-Schwellen")
+    
+    col_dens_1, col_dens_2 = st.columns(2)
+    with col_dens_1:
+        # Dropdown für die Jahre (1, 5, 10, 20)
+        selected_horizon_label = st.selectbox("Anlagehorizont wählen", list(horizons.keys()), key="dens_horizon")
+        days_density = horizons[selected_horizon_label]
+    
+    with col_dens_2:
+        # Dropdown für das VaR Level
+        selected_var_ui = st.selectbox("VaR-Level wählen", list(var_levels_ui.keys()), index=1, key="dens_var")
+        alpha_density = var_levels_ui[selected_var_ui]
+
+    # Plot C zeichnen (mit Spinner, da MC + KDE leicht rechenintensiv sind)
+    with st.spinner("Berechne Verteilungsdichten..."):
+        fig_density = plot_density_comparison(
+            port_ret_log, 
+            port_ret_discrete, 
+            start_capital, 
+            days_density, 
+            selected_horizon_label, 
+            alpha_density
+        )
+    st.plotly_chart(fig_density, use_container_width=True)
+
