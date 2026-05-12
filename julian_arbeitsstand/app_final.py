@@ -351,20 +351,6 @@ with tab_uebersicht:
     col4.metric("Treynor-Ratio", f"{kpis['Treynor_Ratio']:.4f}", help="Überrendite pro Einheit des systematischen Risikos (Beta).")
     
     st.write("---")
-    st.plotly_chart(plot_historical_performance(port_ret_discrete, bench_world, bench_rf, start_capital), use_container_width=True)
-
-# ----------------- REITER 0: ÜBERSICHT -----------------
-with tab_uebersicht:
-    st.header("Performance KPIs")
-    kpis = calculate_performance_kpis(port_ret_discrete, bench_world, bench_rf)
-    
-    col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Beta", f"{kpis['Beta']:.2f}", help="Maß für die Schwankung des Portfolios im Vergleich zum Markt.")
-    col2.metric("Sharpe Ratio", f"{kpis['Sharpe_Ratio']:.2f}", help="Überrendite pro Einheit Risiko (Volatilität).")
-    col3.metric("Roy's Safety First", f"{kpis['Roys_Safety_First']:.2f}", help="Wahrscheinlichkeit, dass die Rendite unter eine Mindestrendite fällt.")
-    col4.metric("Treynor-Ratio", f"{kpis['Treynor_Ratio']:.4f}", help="Überrendite pro Einheit des systematischen Risikos (Beta).")
-    
-    st.write("---")
    
     mkt_returns = bench_world.pct_change().dropna()
     rf_returns = bench_rf.dropna() / 100 / 252 
