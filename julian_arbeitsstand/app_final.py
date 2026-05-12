@@ -590,6 +590,15 @@ with tab_methoden:
     fig_bar = plot_var_bar_comparison(df_comp, horizons, levels_to_show=[conf_1_label, conf_2_label])
     st.plotly_chart(fig_bar, use_container_width=True)
 
+    st.warning(
+        "**Analytischer Hinweis: Die Falle des Recency Bias im historischen Modell**\n\n"
+        "Fällt dir auf, dass der **Historische VaR (Blau)** bei langen Horizonten oft viel geringere Risiken "
+        "(oder sogar garantierte Gewinne) anzeigt als die anderen Modelle? Das ist ein klassischer **Recency Bias** "
+        "(Verzerrung durch die jüngste Vergangenheit). \n\n"
+        "Unser Datensatz (2012–2026) deckt fast ausschließlich den **beispiellosen Bullenmarkt der Tech-Branche** ab. "
+        "Das historische Modell 'kennt' für die Magnificent 7 also faktisch keine echten, jahrelangen Bärenmärkte (wie z. B. nach 2000). "
+        "Es nimmt blind an, dass die nächsten 10 Jahre genauso steigen wie die letzten. "
+    )
 
     st.write("---")
 
