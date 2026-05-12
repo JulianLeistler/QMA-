@@ -394,8 +394,14 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
 
     # --- FIX 2: Dynamischer Zoom auf die X-Achse (Fokus auf das Risiko) ---
     # Wir schneiden die extremen Gewinne ab, damit man die VaR-Bereiche gut erkennen kann.
-    zoom_max = start_capital * 3 if days > 252 else start_capital * 0.5
+    mc_cutoff = np.percentile(mc_pnl_C, 95)
+    hist_cutoff = hist_pnl_C.max() if len(hist_pnl_C) > 0 else 0
     
+    zoom_max = max(mc_cutoff, hist_cutoff)
+    
+    # Sicherstellen, dass wir bei sehr kleinen Gewinnen/Verlusten nicht zu nah reinzoomen
+    zoom_max = max(zoom_max, start_capital * 0.5)
+
     fig_pC.update_layout(
         template='plotly_dark',
         title=f'Verteilungs- und Methodenvergleich ({horizon_label}) – {conf_str} % Konfidenz',
