@@ -407,6 +407,66 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     )
     return fig_pC
 
+# ==========================================
+# 5. UI HELPER FUNCTION
+# ==========================================
+def render_risk_tab(days, tab_title):
+    st.header(tab_title)
+    
+    # Layout für A und B Selektion
+    col_a, col_b = st.columns(2)
+    
+    with col_a:
+        st.subheader("Auswahl VaR-Level - A")
+        lvl_a_name = st.selectbox("VaR-Level A", list(var_levels_ui.keys()), key=f"sel_a_{days}", label_visibility="collapsed")
+        alpha_a = var_levels_ui[lvl_a_name]
+        
+        # Berechnungen A
+        h_var_a, h_es_a = calculate_historical_risk(port_ret_log, start_capital, alpha_a, days)
+        g_var_a, g_es_a = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_a, days)
+        l_var_a, l_es_a = calculate_lognormal_risk(port_ret_log, start_capital, alpha_a, days)
+        
+        st.write("---")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Historisch VaR", f"${h_var_a:,.0f}")
+        c1.metric("Historisch ES", f"${h_es_a:,.0f}")
+        c2.metric("Gaußsch VaR", f"${g_var_a:,.0f}")
+        c2.metric("Gaußsch ES", f"${g_es_a:,.0f}")
+        c3.metric("Lognormal VaR", f"${l_var_a:,.0f}")
+        c3.metric("Lognormal ES", f"${l_es_a:,.0f}")
+
+    with col_b:
+        st.subheader("Auswahl VaR-Level - B")
+        lvl_b_name = st.selectbox("VaR-Level B", list(var_levels_ui.keys()), key=f"sel_b_{days}", index=1, label_visibility="collapsed")
+        alpha_b = var_levels_ui[lvl_b_name]
+        
+        # Berechnungen B
+        h_var_b, h_es_b = calculate_historical_risk(port_ret_log, start_capital, alpha_b, days)
+        g_var_b, g_es_b = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_b, days)
+        l_var_b, l_es_b = calculate_lognormal_risk(port_ret_log, start_capital, alpha_b, days)
+        
+        st.write("---")
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Historisch VaR", f"${h_var_b:,.0f}")
+        c1.metric("Historisch ES", f"${h_es_b:,.0f}")
+        c2.metric("Gaußsch VaR", f"${g_var_b:,.0f}")
+        c2.metric("Gaußsch ES", f"${g_es_b:,.0f}")
+        c3.metric("Lognormal VaR", f"${l_var_b:,.0f}")
+        c3.metric("Lognormal ES", f"${l_es_b:,.0f}")
+
+    # Visualisierungen A und B
+    st.write("---")
+    col_chart_a, col_chart_b = st.columns(2)
+    
+    # Monte Carlo Sim für Charts
+    _, _, _, paths_a = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_a, days, simulations=2000)
+    _, _, _, paths_b = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_b, days, simulations=2000)
+    
+    with col_chart_a:
+        st.plotly_chart(plot_monte_carlo_fan_chart(paths_a, start_capital, alpha_a, f"Visualisierung VaR A ({lvl_a_name})"), use_container_width=True)
+    with col_chart_b:
+        st.plotly_chart(plot_monte_carlo_fan_chart(paths_b, start_capital, alpha_b, f"Visualisierung VaR B ({lvl_b_name})"), use_container_width=True)
+
 
 # ==========================================
 # 6. STREAMLIT APP LAYOUT
