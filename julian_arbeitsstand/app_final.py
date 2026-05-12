@@ -22,7 +22,6 @@ horizons = {
     "1 Jahr": 252,
     "5 Jahre": 1260,
     "10 Jahre": 2520,
-    "20 Jahre": 5040,
 }
 
 var_levels_ui = {
@@ -333,19 +332,19 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     
     hist_pnl_C = ((np.exp(rolling_log_C) - 1) * start_capital).values
 
-    # 2. Gauss: analytische Dichte ueber denselben x-Bereich
+    # 2. Gauss: analytische Dichte
     clean_disc = portfolio_returns_discrete.dropna()
     mu_g = clean_disc.mean() * days
     sigma_g = clean_disc.std() * np.sqrt(days)
 
-    # 3. Lognormal MC: Endwerte ziehen, in PnL umrechnen (2000 Sims für UI-Geschwindigkeit)
+    # 3. Lognormal MC
     _, _, final_values_C, _ = calculate_monte_carlo_risk(
         portfolio_returns_log, start_capital, alpha, days,
         simulations=2000, black_swan=False,
     )
     mc_pnl_C = final_values_C - start_capital
 
-    # Gemeinsames x-Grid
+    # Gemeinsames x-Grid (Berechnung für die Kurven)
     x_lo = float(min(hist_pnl_C.min(), mc_pnl_C.min(), (mu_g - 4*sigma_g)*start_capital))
     x_hi = float(max(hist_pnl_C.max(), mc_pnl_C.max(), (mu_g + 4*sigma_g)*start_capital))
     x_grid_C = np.linspace(x_lo, x_hi, 500)
@@ -378,86 +377,36 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
         line=dict(color='rgb(46, 204, 113)', width=2.2), name='Lognormal (MC)'
     ))
     
-    # Vertikale VaR-Linien
-    fig_pC.add_vline(x=var_hist_C, line=dict(color='rgb(52, 152, 219)', width=1.5, dash='dash'),
-                     annotation_text=f"VaR Hist: {var_hist_C:,.0f}", annotation_position='top left')
-    fig_pC.add_vline(x=var_gauss_C, line=dict(color='rgb(231, 76, 60)', width=1.5, dash='dash'),
-                     annotation_text=f"VaR Gauß: {var_gauss_C:,.0f}", annotation_position='top')
-    fig_pC.add_vline(x=var_mc_C, line=dict(color='rgb(46, 204, 113)', width=1.5, dash='dash'),
-                     annotation_text=f"VaR MC: {var_mc_C:,.0f}", annotation_position='top right')
+    # --- FIX 1: VaR Linien mit entzerrten Beschriftungen ---
+    fig_pC.add_vline(x=var_hist_C, line=dict(color='rgb(52, 152, 219)', width=1.5, dash='dash'))
+    fig_pC.add_annotation(x=var_hist_C, y=0.95, yref='paper', text=f"VaR Hist: ${var_hist_C:,.0f}", 
+                          showarrow=False, font=dict(color='rgb(52, 152, 219)', size=11), xanchor='right')
 
-    # Konfidenz-String für den Titel erstellen (z.B. aus 0.05 wird 95)
+    fig_pC.add_vline(x=var_gauss_C, line=dict(color='rgb(231, 76, 60)', width=1.5, dash='dash'))
+    fig_pC.add_annotation(x=var_gauss_C, y=0.88, yref='paper', text=f"VaR Gauß: ${var_gauss_C:,.0f}", 
+                          showarrow=False, font=dict(color='rgb(231, 76, 60)', size=11), xanchor='left')
+
+    fig_pC.add_vline(x=var_mc_C, line=dict(color='rgb(46, 204, 113)', width=1.5, dash='dash'))
+    fig_pC.add_annotation(x=var_mc_C, y=0.81, yref='paper', text=f"VaR MC: ${var_mc_C:,.0f}", 
+                          showarrow=False, font=dict(color='rgb(46, 204, 113)', size=11), xanchor='left')
+
     conf_str = f"{(1-alpha)*100:.0f}"
 
+    # --- FIX 2: Dynamischer Zoom auf die X-Achse (Fokus auf das Risiko) ---
+    # Wir schneiden die extremen Gewinne ab, damit man die VaR-Bereiche gut erkennen kann.
+    zoom_max = start_capital * 3 if days > 252 else start_capital * 0.5
+    
     fig_pC.update_layout(
         template='plotly_dark',
         title=f'Verteilungs- und Methodenvergleich ({horizon_label}) – {conf_str} % Konfidenz',
         xaxis_title='Gewinn/Verlust (USD)',
         yaxis_title='Wahrscheinlichkeitsdichte',
         height=520,
-        hovermode='x unified'
+        hovermode='x unified',
+        xaxis=dict(range=[x_lo, zoom_max]) # Hier wird der Zoom-Fix angewandt
     )
     return fig_pC
 
-# ==========================================
-# 5. UI HELPER FUNCTION
-# ==========================================
-def render_risk_tab(days, tab_title):
-    st.header(tab_title)
-    
-    # Layout für A und B Selektion
-    col_a, col_b = st.columns(2)
-    
-    with col_a:
-        st.subheader("Auswahl VaR-Level - A")
-        lvl_a_name = st.selectbox("VaR-Level A", list(var_levels_ui.keys()), key=f"sel_a_{days}", label_visibility="collapsed")
-        alpha_a = var_levels_ui[lvl_a_name]
-        
-        # Berechnungen A
-        h_var_a, h_es_a = calculate_historical_risk(port_ret_log, start_capital, alpha_a, days)
-        g_var_a, g_es_a = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_a, days)
-        l_var_a, l_es_a = calculate_lognormal_risk(port_ret_log, start_capital, alpha_a, days)
-        
-        st.write("---")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Historisch VaR", f"${h_var_a:,.0f}")
-        c1.metric("Historisch ES", f"${h_es_a:,.0f}")
-        c2.metric("Gaußsch VaR", f"${g_var_a:,.0f}")
-        c2.metric("Gaußsch ES", f"${g_es_a:,.0f}")
-        c3.metric("Lognormal VaR", f"${l_var_a:,.0f}")
-        c3.metric("Lognormal ES", f"${l_es_a:,.0f}")
-
-    with col_b:
-        st.subheader("Auswahl VaR-Level - B")
-        lvl_b_name = st.selectbox("VaR-Level B", list(var_levels_ui.keys()), key=f"sel_b_{days}", index=1, label_visibility="collapsed")
-        alpha_b = var_levels_ui[lvl_b_name]
-        
-        # Berechnungen B
-        h_var_b, h_es_b = calculate_historical_risk(port_ret_log, start_capital, alpha_b, days)
-        g_var_b, g_es_b = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_b, days)
-        l_var_b, l_es_b = calculate_lognormal_risk(port_ret_log, start_capital, alpha_b, days)
-        
-        st.write("---")
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Historisch VaR", f"${h_var_b:,.0f}")
-        c1.metric("Historisch ES", f"${h_es_b:,.0f}")
-        c2.metric("Gaußsch VaR", f"${g_var_b:,.0f}")
-        c2.metric("Gaußsch ES", f"${g_es_b:,.0f}")
-        c3.metric("Lognormal VaR", f"${l_var_b:,.0f}")
-        c3.metric("Lognormal ES", f"${l_es_b:,.0f}")
-
-    # Visualisierungen A und B
-    st.write("---")
-    col_chart_a, col_chart_b = st.columns(2)
-    
-    # Monte Carlo Sim für Charts
-    _, _, _, paths_a = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_a, days, simulations=2000)
-    _, _, _, paths_b = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_b, days, simulations=2000)
-    
-    with col_chart_a:
-        st.plotly_chart(plot_monte_carlo_fan_chart(paths_a, start_capital, alpha_a, f"Visualisierung VaR A ({lvl_a_name})"), use_container_width=True)
-    with col_chart_b:
-        st.plotly_chart(plot_monte_carlo_fan_chart(paths_b, start_capital, alpha_b, f"Visualisierung VaR B ({lvl_b_name})"), use_container_width=True)
 
 # ==========================================
 # 6. STREAMLIT APP LAYOUT
