@@ -175,9 +175,9 @@ def get_comparison_data(log_ret, discrete_ret, capital):
             l_var, _ = calculate_lognormal_risk(log_ret, capital, alpha, days)
             
             # Daten für DataFrame sammeln
-            results.append({"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Historisch", "VaR ($)": abs(h_var)})
-            results.append({"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Gaußsch", "VaR ($)": abs(g_var)})
-            results.append({"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Lognormal (MC)", "VaR ($)": abs(l_var)})
+            results.append({"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Historisch", "VaR ($)": h_var})
+            results.append({"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Gaußsch", "VaR ($)": g_var})
+            results.append({"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Lognormal (MC)", "VaR ($)": l_var})
             
     return pd.DataFrame(results)
 # ==========================================
