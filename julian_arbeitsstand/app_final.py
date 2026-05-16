@@ -525,11 +525,11 @@ def format_currency(value):
     if np.isnan(value):
         return "N/A"
     if abs(value) >= 1_000_000:
-        return f"${value / 1_000_000:.4f}M"
+        return f"${value / 1_000_000:.2f}M"
     elif abs(value) >= 1_000:
-        return f"${value / 1_000:.4f}k"
+        return f"${value / 1_000:.2f}k"
     else:
-        return f"${value:.4f}"
+        return f"${value:.2f}"
 
 def render_risk_tab(days, tab_title):
     st.header(tab_title)
@@ -549,12 +549,12 @@ def render_risk_tab(days, tab_title):
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("BHS VaR", format_currency(bhs_var_a))
     c1.metric("BHS ES", format_currency(bhs_es_a))
-    c2.metric("Boot VaR", format_currency(boot_var_a))
-    c2.metric("Boot ES", format_currency(boot_es_a))
+    c2.metric("Bootstrapping VaR", format_currency(boot_var_a))
+    c2.metric("Bootstrapping ES", format_currency(boot_es_a))
     c3.metric("Gaußsch VaR", format_currency(g_var_a))
     c3.metric("Gaußsch ES", format_currency(g_es_a))
-    c4.metric("MC VaR", format_currency(mc_var_a))
-    c4.metric("MC ES", format_currency(mc_es_a))
+    c4.metric("Lognorm VaR", format_currency(mc_var_a))
+    c4.metric("Lognorm ES", format_currency(mc_es_a))
 
     st.write("---") # Visuelle Trennung
 
@@ -573,23 +573,20 @@ def render_risk_tab(days, tab_title):
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("BHS VaR", format_currency(bhs_var_b))
     c1.metric("BHS ES", format_currency(bhs_es_b))
-    c2.metric("Boot VaR", format_currency(boot_var_b))
-    c2.metric("Boot ES", format_currency(boot_es_b))
+    c2.metric("Bootstrapping VaR", format_currency(boot_var_b))
+    c2.metric("Bootstrapping ES", format_currency(boot_es_b))
     c3.metric("Gaußsch VaR", format_currency(g_var_b))
     c3.metric("Gaußsch ES", format_currency(g_es_b))
-    c4.metric("MC VaR", format_currency(mc_var_b))
-    c4.metric("MC ES", format_currency(mc_es_b))
+    c4.metric("Lognorm VaR", format_currency(mc_var_b))
+    c4.metric("Lognorm ES", format_currency(mc_es_b))
 
     st.write("---")
     
-    # ==========================================
-    # CHARTS (Nebeneinander ist hier okay, da Plots skalieren)
-    # ==========================================
     col_chart_a, col_chart_b = st.columns(2)
     with col_chart_a:
-        st.plotly_chart(plot_monte_carlo_fan_chart(paths_a, start_capital, alpha_a, f"MC Pfade & VaR A ({lvl_a_name})"), use_container_width=True)
+        st.plotly_chart(plot_monte_carlo_fan_chart(paths_a, start_capital, alpha_a, f"Visualisierung (mit Lognorm) VaR A ({lvl_a_name})"), use_container_width=True)
     with col_chart_b:
-        st.plotly_chart(plot_monte_carlo_fan_chart(paths_b, start_capital, alpha_b, f"MC Pfade & VaR B ({lvl_b_name})"), use_container_width=True)
+        st.plotly_chart(plot_monte_carlo_fan_chart(paths_b, start_capital, alpha_b, f"Visualisierung (mit Lognorm) VaR B ({lvl_b_name})"), use_container_width=True)
 
 # ==========================================
 # 6. STREAMLIT APP LAYOUT
