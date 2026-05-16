@@ -274,9 +274,9 @@ def plot_historical_performance(portfolio_returns, market_returns, sp500_returns
     ], axis=1, sort=False).dropna()
 
     portfolio_growth = start_capital * (1 + aligned_data['Portfolio']).cumprod()
-    market_growth = start_capital * (1 + aligned_data['Market']).cumprod()
-    sp500_growth = start_capital * (1 + aligned_data['S&P 500']).cumprod()
-    nasdaq_growth = start_capital * (1 + aligned_data['NASDAQ']).cumprod()
+    market_growth = start_capital * (1 + aligned_data['All World ETF']).cumprod()
+    sp500_growth = start_capital * (1 + aligned_data['S&P 500 ETF']).cumprod()
+    nasdaq_growth = start_capital * (1 + aligned_data['NASDAQ ETF']).cumprod()
 
     portfolio_growth.loc[aligned_data.index[0] - pd.Timedelta(days=1)] = start_capital
     market_growth.loc[aligned_data.index[0] - pd.Timedelta(days=1)] = start_capital
@@ -521,64 +521,71 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
 # ==========================================
 # 5. UI HELPER FUNCTION
 # ==========================================
+def format_currency(value): #Formatierung für bessere Lesbarkeit der OUTPUTS
+    if np.isnan(value):
+        return "N/A"
+    if abs(value) >= 1_000_000:
+        return f"${value / 1_000_000:.2f}M"
+    elif abs(value) >= 1_000:
+        return f"${value / 1_000:.0f}k"
+    else:
+        return f"${value:.0f}"
+
 def render_risk_tab(days, tab_title):
     st.header(tab_title)
     
-    col_a, col_b = st.columns(2)
+    # ==========================================
+    # BEREICH A (Volle Breite)
+    # ==========================================
+    st.subheader("Auswahl VaR-Level - A")
+    lvl_a_name = st.selectbox("VaR-Level A", list(var_levels_ui.keys()), key=f"sel_a_{days}")
+    alpha_a = var_levels_ui[lvl_a_name]
     
-    with col_a:
-        st.subheader("Auswahl VaR-Level - A")
-        lvl_a_name = st.selectbox("VaR-Level A", list(var_levels_ui.keys()), key=f"sel_a_{days}", label_visibility="collapsed")
-        alpha_a = var_levels_ui[lvl_a_name]
-        
-        bhs_var_a, bhs_es_a = calculate_historical_risk(port_ret_log, start_capital, alpha_a, days)
-        boot_var_a, boot_es_a = calculate_bootstrap_risk(port_ret_log, start_capital, alpha_a, days, simulations=10000)
-        g_var_a, g_es_a = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_a, days)
-        mc_var_a, mc_es_a, _, paths_a = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_a, days, simulations=2000, black_swan=False)
-        
-        st.write("---")
-        c1, c2, c3, c4 = st.columns(4)
-        
-        bhs_v_str_a = f"${bhs_var_a:,.0f}" if not np.isnan(bhs_var_a) else "N/A"
-        bhs_e_str_a = f"${bhs_es_a:,.0f}" if not np.isnan(bhs_es_a) else "N/A"
-        
-        c1.metric("BHS VaR", bhs_v_str_a)
-        c1.metric("BHS ES", bhs_e_str_a)
-        c2.metric("Bootstrapping VaR", f"${boot_var_a:,.0f}")
-        c2.metric("Bootstrapping ES", f"${boot_es_a:,.0f}")
-        c3.metric("Gaußsch VaR", f"${g_var_a:,.0f}")
-        c3.metric("Gaußsch ES", f"${g_es_a:,.0f}")
-        c4.metric("MC VaR", f"${mc_var_a:,.0f}")
-        c4.metric("MC ES", f"${mc_es_a:,.0f}")
+    bhs_var_a, bhs_es_a = calculate_historical_risk(port_ret_log, start_capital, alpha_a, days)
+    boot_var_a, boot_es_a = calculate_bootstrap_risk(port_ret_log, start_capital, alpha_a, days, simulations=10000)
+    g_var_a, g_es_a = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_a, days)
+    mc_var_a, mc_es_a, _, paths_a = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_a, days, simulations=2000, black_swan=False)
+    
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("BHS VaR", format_currency(bhs_var_a))
+    c1.metric("BHS ES", format_currency(bhs_es_a))
+    c2.metric("Boot VaR", format_currency(boot_var_a))
+    c2.metric("Boot ES", format_currency(boot_es_a))
+    c3.metric("Gaußsch VaR", format_currency(g_var_a))
+    c3.metric("Gaußsch ES", format_currency(g_es_a))
+    c4.metric("MC VaR", format_currency(mc_var_a))
+    c4.metric("MC ES", format_currency(mc_es_a))
 
-    with col_b:
-        st.subheader("Auswahl VaR-Level - B")
-        lvl_b_name = st.selectbox("VaR-Level B", list(var_levels_ui.keys()), key=f"sel_b_{days}", index=1, label_visibility="collapsed")
-        alpha_b = var_levels_ui[lvl_b_name]
-        
-        bhs_var_b, bhs_es_b = calculate_historical_risk(port_ret_log, start_capital, alpha_b, days)
-        boot_var_b, boot_es_b = calculate_bootstrap_risk(port_ret_log, start_capital, alpha_b, days, simulations=10000)
-        g_var_b, g_es_b = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_b, days)
-        mc_var_b, mc_es_b, _, paths_b = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_b, days, simulations=2000, black_swan=False)
-        
-        st.write("---")
-        c1, c2, c3, c4 = st.columns(4)
-        
-        bhs_v_str_b = f"${bhs_var_b:,.0f}" if not np.isnan(bhs_var_b) else "N/A"
-        bhs_e_str_b = f"${bhs_es_b:,.0f}" if not np.isnan(bhs_es_b) else "N/A"
+    st.write("---") # Visuelle Trennung
 
-        c1.metric("BHS VaR", bhs_v_str_b)
-        c1.metric("BHS ES", bhs_e_str_b)
-        c2.metric("Bootstrapping VaR", f"${boot_var_b:,.0f}")
-        c2.metric("Bootstrapping ES", f"${boot_es_b:,.0f}")
-        c3.metric("Gaußsch VaR", f"${g_var_b:,.0f}")
-        c3.metric("Gaußsch ES", f"${g_es_b:,.0f}")
-        c4.metric("MC VaR", f"${mc_var_b:,.0f}")
-        c4.metric("MC ES", f"${mc_es_b:,.0f}")
+    # ==========================================
+    # BEREICH B (Volle Breite)
+    # ==========================================
+    st.subheader("Auswahl VaR-Level - B")
+    lvl_b_name = st.selectbox("VaR-Level B", list(var_levels_ui.keys()), key=f"sel_b_{days}", index=1)
+    alpha_b = var_levels_ui[lvl_b_name]
+    
+    bhs_var_b, bhs_es_b = calculate_historical_risk(port_ret_log, start_capital, alpha_b, days)
+    boot_var_b, boot_es_b = calculate_bootstrap_risk(port_ret_log, start_capital, alpha_b, days, simulations=10000)
+    g_var_b, g_es_b = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_b, days)
+    mc_var_b, mc_es_b, _, paths_b = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_b, days, simulations=2000, black_swan=False)
+    
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("BHS VaR", format_currency(bhs_var_b))
+    c1.metric("BHS ES", format_currency(bhs_es_b))
+    c2.metric("Boot VaR", format_currency(boot_var_b))
+    c2.metric("Boot ES", format_currency(boot_es_b))
+    c3.metric("Gaußsch VaR", format_currency(g_var_b))
+    c3.metric("Gaußsch ES", format_currency(g_es_b))
+    c4.metric("MC VaR", format_currency(mc_var_b))
+    c4.metric("MC ES", format_currency(mc_es_b))
 
     st.write("---")
-    col_chart_a, col_chart_b = st.columns(2)
     
+    # ==========================================
+    # CHARTS (Nebeneinander ist hier okay, da Plots skalieren)
+    # ==========================================
+    col_chart_a, col_chart_b = st.columns(2)
     with col_chart_a:
         st.plotly_chart(plot_monte_carlo_fan_chart(paths_a, start_capital, alpha_a, f"MC Pfade & VaR A ({lvl_a_name})"), use_container_width=True)
     with col_chart_b:
@@ -621,7 +628,7 @@ with tab_uebersicht:
      sp500_returns = sp500_returns,
      nasdaq_returns = nasdaq_returns,
      start_capital = start_capital,
-     title = "Performance MAG7 vs. Markt vs. Risikofreier Zins (2012-2026)"
+     title = "Performance MAG7 vs. Markt vs. SP500 vs. NASDAQ (2012-2026)"
  )
     st.plotly_chart(fig_hist, use_container_width=True)
 
