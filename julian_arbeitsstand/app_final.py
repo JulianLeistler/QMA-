@@ -274,9 +274,9 @@ def plot_historical_performance(portfolio_returns, market_returns, sp500_returns
     ], axis=1, sort=False).dropna()
 
     portfolio_growth = start_capital * (1 + aligned_data['Portfolio']).cumprod()
-    market_growth = start_capital * (1 + aligned_data['All World ETF']).cumprod()
-    sp500_growth = start_capital * (1 + aligned_data['S&P 500 ETF']).cumprod()
-    nasdaq_growth = start_capital * (1 + aligned_data['NASDAQ ETF']).cumprod()
+    market_growth = start_capital * (1 + aligned_data['Market']).cumprod()
+    sp500_growth = start_capital * (1 + aligned_data['S&P 500']).cumprod()
+    nasdaq_growth = start_capital * (1 + aligned_data['NASDAQ']).cumprod()
 
     portfolio_growth.loc[aligned_data.index[0] - pd.Timedelta(days=1)] = start_capital
     market_growth.loc[aligned_data.index[0] - pd.Timedelta(days=1)] = start_capital
@@ -299,19 +299,19 @@ def plot_historical_performance(portfolio_returns, market_returns, sp500_returns
     fig.add_trace(go.Scatter(
         x=market_growth.index, y=market_growth,
         mode='lines', line=dict(color='rgb(231, 76, 60)', width=2), # Rot
-        name='Markt (Benchmark)'
+        name='All World ETF'
     ))
 
     fig.add_trace(go.Scatter(
         x=sp500_growth.index, y=sp500_growth,
         mode='lines', line=dict(color='rgb(46, 204, 113)', width=2, dash='dot'), # Grün gepunktet
-        name='S&P 500'
+        name='S&P 500 ETF'
     ))
 
     fig.add_trace(go.Scatter(
         x=nasdaq_growth.index, y=nasdaq_growth,
         mode='lines', line=dict(color='rgb(142, 68, 173)', width=2, dash='dash'), # Lila gestrichelt
-        name='NASDAQ'
+        name='NASDAQ 100 ETF'
     ))
 
     fig.update_layout(
