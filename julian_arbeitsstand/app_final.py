@@ -521,15 +521,15 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
 # ==========================================
 # 5. UI HELPER FUNCTION
 # ==========================================
-def format_currency(value): #Formatierung für bessere Lesbarkeit der OUTPUTS
+def format_currency(value):
     if np.isnan(value):
         return "N/A"
     if abs(value) >= 1_000_000:
-        return f"${value / 1_000_000:.2f}M"
+        return f"${value / 1_000_000:.4f}M"
     elif abs(value) >= 1_000:
-        return f"${value / 1_000:.0f}k"
+        return f"${value / 1_000:.4f}k"
     else:
-        return f"${value:.0f}"
+        return f"${value:.4f}"
 
 def render_risk_tab(days, tab_title):
     st.header(tab_title)
