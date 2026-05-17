@@ -521,6 +521,7 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
 # ==========================================
 # 5. UI HELPER FUNCTION
 # ==========================================
+
 def format_currency(value):
     if np.isnan(value):
         return "N/A"
@@ -533,9 +534,9 @@ def format_currency(value):
 
 def render_risk_tab(days, tab_title):
     st.header(tab_title)
-    
+
     # ==========================================
-    # BEREICH A (Volle Breite)
+    # BEREICH A
     # ==========================================
     st.subheader("Auswahl VaR-Level - A")
     lvl_a_name = st.selectbox("VaR-Level A", list(var_levels_ui.keys()), key=f"sel_a_{days}")
@@ -549,17 +550,27 @@ def render_risk_tab(days, tab_title):
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("BHS VaR", format_currency(bhs_var_a))
     c1.metric("BHS ES", format_currency(bhs_es_a))
-    c2.metric("Bootstrapping VaR", format_currency(boot_var_a))
-    c2.metric("Bootstrapping ES", format_currency(boot_es_a))
+    c2.metric("Hist. Bootstrapping VaR", format_currency(boot_var_a))
+    c2.metric("Hist. Bootstrapping ES", format_currency(boot_es_a))
     c3.metric("Gaußsch VaR", format_currency(g_var_a))
     c3.metric("Gaußsch ES", format_currency(g_es_a))
     c4.metric("Lognorm VaR", format_currency(mc_var_a))
     c4.metric("Lognorm ES", format_currency(mc_es_a))
 
+    if Info_modus:
+        st.info("""
+        ** Interpretation von VaR und ES im PnL-Format**
+        
+        In diesem Dashboard werden der Value at Risk (VaR) und der Expected Shortfall (ES) strikt als **PnL (Profit and Loss)** relativ zum Startkapital ausgewiesen. Ein negatives Vorzeichen impliziert einen Verlust, ein positives Vorzeichen einen Gewinn.
+        
+        * **Negativer VaR (z.B. -10.000 $ bei 5 % Konfidenz):** Dies bedeutet, dass unser Portfolio-Wert mit einer Wahrscheinlichkeit von **95 % nicht stärker fällt** als um 10.000 $. In nur 5 % der Fälle verlieren wir mehr.
+        * **Negativer ES (z.B. -15.000 $ bei 5 % Konfidenz):** Der ES quantifiziert das Risiko jenseits des VaR. Er besagt: *Wenn* das 5 % Worst-Case-Szenario eintritt, liegt unser **durchschnittlicher** Verlust in diesem Extrembereich bei 15.000 $.
+        * **Positiver VaR (z.B. +10.000 $ bei 5 % Konfidenz):** Ein hochinteressanter Sonderfall bei langen Anlagehorizonten! Dies bedeutet, dass wir selbst in unserem definierten Stress-Szenario keinen Verlust machen. Mit 95 %iger Wahrscheinlichkeit erzielen wir einen **Gewinn von mindestens** 10.000 $ über dem Startkapital.
+        """)
     st.write("---") # Visuelle Trennung
 
     # ==========================================
-    # BEREICH B (Volle Breite)
+    # BEREICH B
     # ==========================================
     st.subheader("Auswahl VaR-Level - B")
     lvl_b_name = st.selectbox("VaR-Level B", list(var_levels_ui.keys()), key=f"sel_b_{days}", index=1)
@@ -573,8 +584,8 @@ def render_risk_tab(days, tab_title):
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("BHS VaR", format_currency(bhs_var_b))
     c1.metric("BHS ES", format_currency(bhs_es_b))
-    c2.metric("Bootstrapping VaR", format_currency(boot_var_b))
-    c2.metric("Bootstrapping ES", format_currency(boot_es_b))
+    c2.metric("Hist. Bootstrapping VaR", format_currency(boot_var_b))
+    c2.metric("Hist. Bootstrapping ES", format_currency(boot_es_b))
     c3.metric("Gaußsch VaR", format_currency(g_var_b))
     c3.metric("Gaußsch ES", format_currency(g_es_b))
     c4.metric("Lognorm VaR", format_currency(mc_var_b))
@@ -595,6 +606,8 @@ def render_risk_tab(days, tab_title):
 # Sidebar
 st.sidebar.title("Magnificent 7: Risiko - Dashboard")
 start_capital = st.sidebar.number_input("Startkapital ($)", value=100_000, step=10_000)
+st.sidebar.markdown("---")
+Info_modus = st.sidebar.toggle("Info-Modus aktivieren", value=False)
 
 # Tabs
 tab_uebersicht, tab_1y, tab_5y, tab_10y, tab_black_swan, tab_methoden = st.tabs([
@@ -708,15 +721,17 @@ with tab_methoden:
     fig_bar = plot_var_bar_comparison(df_comp, horizons, levels_to_show=[conf_1_label, conf_2_label])
     st.plotly_chart(fig_bar, use_container_width=True)
 
-    st.warning(
-        "**Analytischer Hinweis: Die Falle des Recency Bias im historischen Modell**\n\n"
-        "Fällt dir auf, dass der **Historische VaR (Blau)** bei langen Horizonten oft viel geringere Risiken "
-        "(oder sogar garantierte Gewinne) anzeigt als die anderen Modelle? Das ist ein klassischer **Recency Bias** "
-        "(Verzerrung durch die jüngste Vergangenheit). \n\n"
-        "Unser Datensatz (2012–2026) deckt fast ausschließlich den **beispiellosen Bullenmarkt der Tech-Branche** ab. "
-        "Das historische Modell 'kennt' für die Magnificent 7 also faktisch keine echten, jahrelangen Bärenmärkte (wie z. B. nach 2000). "
-        "Es nimmt blind an, dass die nächsten 10 Jahre genauso steigen wie die letzten. "
-    )
+   #Didaktischer Block
+    if Info_modus:
+        st.info("""
+        **Recency Bias vs. i.i.d.-Annahme**
+        
+        Vergleicht man lange Anlagehorizonte (5 bis 10 Jahre), zeigt die *Basic Historical Simulation (BHS)* oft selbst im Worst-Case-Szenario massive Gewinne an. Das BHS-Modell unterschätzt das tatsächliche Risiko hier aufgrund des **Recency Bias**: Es rechnet den beispiellosen Bullenmarkt der Tech-Giganten der letzten Dekade blind in die Zukunft fort. 
+        
+        Das **Historische Bootstrapping** liefert hier realistischere Tail-Risiken. Da es zufällig aus historischen Tagesrenditen zieht (mit Zurücklegen), kann es theoretisch extreme Verlusttage mehrmals hintereinander simulieren und so neue Stress-Pfade generieren, die in der reinen Historie nicht vorkamen. 
+        
+        **Der methodische Trade-off:** Während Bootstrapping die Ränder der Verteilung besser ausleuchtet, zwingt es die Daten in eine i.i.d.-Annahme (unabhängig und identisch verteilt). Dadurch wird das echte **Volatility Clustering** (Panik erzeugt weitere Panik) vollständig zerstört, welches im BHS-Modell intakt bleibt.
+        """)
 
     st.write("---")
 
@@ -747,4 +762,6 @@ with tab_methoden:
             alpha_density
         )
     st.plotly_chart(fig_density, use_container_width=True)
+
+
 
