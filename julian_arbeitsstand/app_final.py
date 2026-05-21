@@ -563,9 +563,9 @@ def render_risk_tab(days, tab_title):
         
         In diesem Dashboard werden der Value at Risk (VaR) und der Expected Shortfall (ES) strikt als PnL (Profit and Loss) relativ zum Startkapital ausgewiesen. Ein negatives Vorzeichen impliziert einen Verlust, ein positives Vorzeichen einen Gewinn.
         
-        *Negativer VaR (z.B. -10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass unser Portfolio-Wert mit einer Wahrscheinlichkeit von 95 % nicht stärker fällt als um 10.000 USD vom Startkapital. In nur 5 Prozent der Fälle ist der Verlust größer.
-        *Negativer ES (z.B. -15.000 USD bei 5 % VaR-Level): Der ES quantifiziert das Risiko jenseits des VaR. Dieser besagt: Wenn das 5 % Worst-Case-Szenario eintritt, liegt der durchschnittliche Verlust bei 15.000 USD.
-        *Positiver VaR (z.B. +10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass selbst in dem ausgewählten Stress-Szenario keinen Verlust machen. Mit 95 prozentiger Wahrscheinlichkeit erzielen wir einen Gewinn von mindestens 10.000 USD über dem Startkapital.
+        * Negativer VaR (z.B. -10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass unser Portfolio-Wert mit einer Wahrscheinlichkeit von 95 % nicht stärker fällt als um 10.000 USD vom Startkapital. In nur 5 Prozent der Fälle ist der Verlust größer.
+        * Negativer ES (z.B. -15.000 USD bei 5 % VaR-Level): Der ES quantifiziert das Risiko jenseits des VaR. Dieser besagt: Wenn das 5 % Worst-Case-Szenario eintritt, liegt der durchschnittliche Verlust bei 15.000 USD.
+        * Positiver VaR (z.B. +10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass selbst in dem ausgewählten Stress-Szenario keinen Verlust machen. Mit 95 prozentiger Wahrscheinlichkeit erzielen wir einen Gewinn von mindestens 10.000 USD über dem Startkapital.
         """)
 
     st.write("---") # Visuelle Trennung
@@ -699,7 +699,7 @@ with tab_black_swan:
         st.info("""
         Interpretation der Black-Swan-Simulation:
         * Median-Vergleich: Der Vergleich der Median-Pfade zwischen Normal- und Black-Swan-Simulation zeigt, dass selbst der "durchschnittliche" Pfad im Black-Swan-Szenario deutlich schlechter abschneidet als im normalen Szenario, was die systematischen Auswirkungen solcher Ereignisse auf die Portfolio-Performance verdeutlicht.
-        * Black-Swan-Abrutsch: Der Absturz am rechten Rand des Charts in der Black-Swan-Sim ist zu erklären, da der Crash nicht einfach nur einfach an Tag 1 modelliert ist sonder als zufällig eintretendes Event im Horizont verteilt ist. Je länger die Simulation dauert desto mehr der "guten" Jahren werden durch die "schlechten" Bedingungen des Black-Swan zunichtegemacht. Am Anfang der Analyse sind die absoluten Werte noch realtiv klein, aber über die Zeit "frisst" sich der Effekt tiefer in die Vermögensentwicklung. Dieser Effekt führt zu einem stärkeren Abrutschen der Werte am Ende des Horizonts. 
+        * Black-Swan-Abrutsch: Der Absturz am rechten Rand des Charts in der Black-Swan-Sim ist zu erklären, da der Crash nicht nur einfach an Tag 1 modelliert ist sonder als zufällig eintretendes Event im Horizont verteilt ist. Je länger die Simulation dauert desto mehr der "guten" Jahren werden durch die "schlechten" Bedingungen des Black-Swan zunichtegemacht. Am Anfang der Analyse sind die absoluten Werte noch realtiv klein, aber über die Zeit "frisst" sich der Effekt tiefer in die Vermögensentwicklung. Dieser Effekt führt zu einem stärkeren Abrutschen der Werte am Ende des Horizonts. 
         """)
 # ----------------- REITER 5: METHODENVERGLEICH -----------------
 with tab_methoden:
