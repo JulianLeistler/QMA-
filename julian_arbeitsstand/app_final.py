@@ -737,15 +737,14 @@ with tab_methoden:
         3. Gaußsche Methode: Diese Methode nimmt an, dass die Renditen normalverteilt sind, und berechnet den VaR analytisch basierend auf dem Mittelwert und der Standardabweichung der Renditen. Sie kann zu ungenauen Schätzungen führen, wenn die tatsächliche Renditeverteilung von der Normalverteilung abweicht, insbesondere wenn sie fette Tails oder Asymmetrie aufweist. Zudem unterschätzt sie das Risiko bei längeren Horizonten, da sie die Rendite linear mit Anzahl der Tagen skaliert, aber die Voalität nur mit sqrt(t). Dies führt besonders bei längeren Horizonten zu einer Unterschätzung des Riskos.
         4. Lognormale Monte-Carlo-Simulation: Diese Methode simuliert zukünftige Renditen basierend auf einer lognormalen Verteilung, die durch die historischen Daten parametrisiert ist. Ähnlich wie bei der Gaußschen Methoden wird von einer (log)-Normalverteilung ausgegangen. Das Risiko kann unterschätz werden wenn die tatscähliche Verteilung Fat-Tails aufweißt. Auch hier werden Volatilitäts-Clustering nicht berücksichtigt.""")
 
-    if Info_modus:
         st.info("""
         Hinweis zum Methodenvergleich (Das Gauß-Paradoxon):
 
         Warum zeigt die Gaußsche Methode im Histogramm oft das höchste Risiko (den größten Verlust bzw niedrigsten Gewinn), obwohl sie das Risiko theoretisch unterschätzen soltle?
 
         * Historische Methoden(BHS & Bootstrapping):Nutzen reale Daten. Da die MAG7-Werte in den letzten Jahren fast nur gestiegen sind, fehlen in der echten Historie bearish-Szenarien. Die historischen Methoden können daher das Risiko unterschätzen.
-        * Gaußsche Methode:Ignoriert die Historie und baut eine perfekt symmetrische Glockenkurve. Da Tech-Aktien voaltiler (Schwankungen nach oben oder unten) sind , spiegelt das Modell diese Schwankungen mathematisch auf beiden Seiten der Glockenkurve. Die Gauß-Methode „erfindet“ also extreme Crash-Szenarien (Voalität der bullishen Phasen), die in den echten Daten so gar nicht passiert sind.
-        """)
+        * Gaußsche Methode:Ignoriert die Historie und baut eine perfekt symmetrische Glockenkurve. Da Tech-Aktien voaltiler (Schwankungen nach oben oder unten) sind , spiegelt das Modell diese Schwankungen mathematisch auf beiden Seiten der Glockenkurve. Die Gauß-Methode „erfindet“ also extreme Crash-Szenarien (Voalität der bullishen Phasen), die in den echten Daten so gar nicht passiert sind.""")
+    
     st.write("---")
 
     # ==========================
