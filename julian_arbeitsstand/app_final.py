@@ -563,9 +563,9 @@ def render_risk_tab(days, tab_title):
         
         In diesem Dashboard werden der Value at Risk (VaR) und der Expected Shortfall (ES) strikt als PnL (Profit and Loss) relativ zum Startkapital ausgewiesen. Ein negatives Vorzeichen impliziert einen Verlust, ein positives Vorzeichen einen Gewinn.
         
-        Negativer VaR (z.B. -10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass unser Portfolio-Wert mit einer Wahrscheinlichkeit von 95 % nicht stärker fällt als um 10.000 USD vom Startkapital. In nur 5 Prozent der Fälle ist der Verlust größer.
-        Negativer ES (z.B. -15.000 USD bei 5 % VaR-Level): Der ES quantifiziert das Risiko jenseits des VaR. Dieser besagt: Wenn das 5 % Worst-Case-Szenario eintritt, liegt der durchschnittliche Verlust bei 15.000 USD.
-        Positiver VaR (z.B. +10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass selbst in dem ausgewählten Stress-Szenario keinen Verlust machen. Mit 95 prozentiger Wahrscheinlichkeit erzielen wir einen Gewinn von mindestens 10.000 USD über dem Startkapital.
+        *Negativer VaR (z.B. -10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass unser Portfolio-Wert mit einer Wahrscheinlichkeit von 95 % nicht stärker fällt als um 10.000 USD vom Startkapital. In nur 5 Prozent der Fälle ist der Verlust größer.
+        *Negativer ES (z.B. -15.000 USD bei 5 % VaR-Level): Der ES quantifiziert das Risiko jenseits des VaR. Dieser besagt: Wenn das 5 % Worst-Case-Szenario eintritt, liegt der durchschnittliche Verlust bei 15.000 USD.
+        *Positiver VaR (z.B. +10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass selbst in dem ausgewählten Stress-Szenario keinen Verlust machen. Mit 95 prozentiger Wahrscheinlichkeit erzielen wir einen Gewinn von mindestens 10.000 USD über dem Startkapital.
         """)
 
     st.write("---") # Visuelle Trennung
@@ -600,6 +600,8 @@ def render_risk_tab(days, tab_title):
     with col_chart_b:
         st.plotly_chart(plot_monte_carlo_fan_chart(paths_b, start_capital, alpha_b, f"Visualisierung (mit Lognorm) VaR B ({lvl_b_name})"), use_container_width=True)
 
+    if Info_modus:
+        st.info("""Fan-Chart mit Lognormaler Monte-Carlo-Simulation erstellt. Die dunkelblaue Linie repräsentiert den Median der simulierten Pfade, die rote Linie zeigt den Worst-Case-Pfad (VaR-Level) und die grüne Linie den Best-Case-Pfad (1 - VaR-Level). Die schattierten Bereiche verdeutlichen die Unsicherheit zwischen diesen Extremen. Ein engeres Band deutet auf geringere Volatilität hin, während ein breiteres Band auf eine höhere Volatilität hindeutet.""")
 # ==========================================
 # 6. STREAMLIT APP LAYOUT
 # ==========================================
@@ -660,7 +662,7 @@ with tab_black_swan:
     
     col1, col2 = st.columns(2)
     with col1:
-        years_swan = st.selectbox("Auswahl Anzahl Jahre", [1, 5, 10, 20])
+        years_swan = st.selectbox("Auswahl Anzahl Jahre", [1, 5, 10])
         days_swan = horizons[f"{years_swan} Jahr" if years_swan == 1 else f"{years_swan} Jahre"]
     with col2:
         swan_lvl_name = st.selectbox("Auswahl VaR-Level", list(var_levels_ui.keys()), key="var_swan")
@@ -693,7 +695,12 @@ with tab_black_swan:
     with col_chart2:
         st.plotly_chart(plot_monte_carlo_fan_chart(paths_swan, start_capital, alpha_swan, "Visualisierung Black Swan"), use_container_width=True)
 
-
+    if Info_modus:
+        st.info("""
+        Interpretation der Black-Swan-Simulation:
+        * Median-Vergleich: Der Vergleich der Median-Pfade zwischen Normal- und Black-Swan-Simulation zeigt, dass selbst der "durchschnittliche" Pfad im Black-Swan-Szenario deutlich schlechter abschneidet als im normalen Szenario, was die systematischen Auswirkungen solcher Ereignisse auf die Portfolio-Performance verdeutlicht.
+        * Black-Swan-Abrutsch: Der Absturz am rechten Rand des Charts in der Black-Swan-Sim ist zu erklären, da der Crash nicht einfach nur einfach an Tag 1 modelliert ist sonder als zufällig eintretendes Event im Horizont verteilt ist. Je länger die Simulation dauert desto mehr der "guten" Jahren werden durch die "schlechten" Bedingungen des Black-Swan zunichtegemacht. Am Anfang der Analyse sind die absoluten Werte noch realtiv klein, aber über die Zeit "frisst" sich der Effekt tiefer in die Vermögensentwicklung. Dieser Effekt führt zu einem stärkeren Abrutschen der Werte am Ende des Horizonts. 
+        """)
 # ----------------- REITER 5: METHODENVERGLEICH -----------------
 with tab_methoden:
     st.header("Methodenvergleich: Historisch vs. Gaußsch vs. Lognormal")
