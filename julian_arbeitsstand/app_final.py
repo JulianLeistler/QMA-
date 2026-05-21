@@ -563,10 +563,11 @@ def render_risk_tab(days, tab_title):
         
         In diesem Dashboard werden der Value at Risk (VaR) und der Expected Shortfall (ES) strikt als **PnL (Profit and Loss)** relativ zum Startkapital ausgewiesen. Ein negatives Vorzeichen impliziert einen Verlust, ein positives Vorzeichen einen Gewinn.
         
-        * **Negativer VaR (z.B. -10.000 $ bei 5 % Konfidenz):** Dies bedeutet, dass unser Portfolio-Wert mit einer Wahrscheinlichkeit von **95 % nicht stärker fällt** als um 10.000 $. In nur 5 % der Fälle verlieren wir mehr.
-        * **Negativer ES (z.B. -15.000 $ bei 5 % Konfidenz):** Der ES quantifiziert das Risiko jenseits des VaR. Er besagt: *Wenn* das 5 % Worst-Case-Szenario eintritt, liegt unser **durchschnittlicher** Verlust in diesem Extrembereich bei 15.000 $.
-        * **Positiver VaR (z.B. +10.000 $ bei 5 % Konfidenz):** Ein hochinteressanter Sonderfall bei langen Anlagehorizonten! Dies bedeutet, dass wir selbst in unserem definierten Stress-Szenario keinen Verlust machen. Mit 95 %iger Wahrscheinlichkeit erzielen wir einen **Gewinn von mindestens** 10.000 $ über dem Startkapital.
+        Negativer VaR (z.B. -10.000 $ bei 5 % VaR-Level): Dies bedeutet, dass unser Portfolio-Wert mit einer Wahrscheinlichkeit von 95 % nicht stärker fällt als um 10.000 $ vom Startkapital. In nur 5 Prozent der Fälle ist der Verlust größer.
+        Negativer ES (z.B. -15.000 $ bei 5 % VaR-Level): Der ES quantifiziert das Risiko jenseits des VaR. Dieser besagt: Wenn das 5 % Worst-Case-Szenario eintritt, liegt der durchschnittliche Verlust bei 15.000 $.
+        Positiver VaR (z.B. +10.000 $ bei 5 % VaR-Level): Dies bedeutet, dass selbst in dem ausgewählten Stress-Szenario keinen Verlust machen. Mit 95 prozentiger Wahrscheinlichkeit erzielen wir einen Gewinn von mindestens 10.000 $ über dem Startkapital.
         """)
+
     st.write("---") # Visuelle Trennung
 
     # ==========================================
@@ -620,10 +621,10 @@ with tab_uebersicht:
     kpis = calculate_performance_kpis(port_ret_discrete, bench_world, bench_rf)
     
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Beta", f"{kpis['Beta']:.2f}", help="Maß für die Schwankung des Portfolios im Vergleich zum Markt.")
-    col2.metric("Sharpe Ratio", f"{kpis['Sharpe_Ratio']:.2f}", help="Überrendite pro Einheit Risiko (Volatilität).")
-    col3.metric("Roy's Safety First", f"{kpis['Roys_Safety_First']:.2f}", help="Wahrscheinlichkeit, dass die Rendite unter eine Mindestrendite fällt.")
-    col4.metric("Treynor-Ratio", f"{kpis['Treynor_Ratio']:.4f}", help="Überrendite pro Einheit des systematischen Risikos (Beta).")
+    col1.metric("Beta", f"{kpis['Beta']:.2f}", help="Maß für die Volatilität des Portfolios im Vergleich zum Markt. Beta > 1 bedeutet höhere Volatilität, Beta < 1 bedeutet niedrigere Volatilität als der Markt.")
+    col2.metric("Sharpe Ratio", f"{kpis['Sharpe_Ratio']:.2f}", help="Überrendite pro Einheit Volatilität. Je höher, desto besser die risikoadjustierte Performance.")
+    col3.metric("Roy's Safety First", f"{kpis['Roys_Safety_First']:.2f}", help="Wahrscheinlichkeit, dass die Rendite unter eine Mindestrendite (risk-free asset, hier US-Staatsanleihe) fällt.")
+    col4.metric("Treynor-Ratio", f"{kpis['Treynor_Ratio']:.2f}", help="Überrendite pro Einheit des systematischen Risikos (Beta).KPI zur Bewertung der effizienz des Portfolios im Vergleich zum Markt.")
     
     st.write("---")
    
@@ -655,7 +656,7 @@ with tab_10y:
 # ----------------- REITER 4: BLACK SWAN -----------------
 with tab_black_swan:
     st.header("Black-Swan-Simulation")
-    st.info("Das Black-Swan-Event simuliert den VaR & ES auf Basis eines im Zeitverlauf zufällig eintretenden Black-Swan. Dieses Event wurde mit den Renditen & Volatilität aus dem Crash der Dotcom-Blase simuliert.")
+    st.info("Das Black-Swan-Event simuliert den VaR & ES auf Basis eines im Zeitverlauf zufällig eintretenden Black-Swan. Dieses Event wurde mit den Renditen & Volatilität aus dem Crash der Dotcom-Blase simuliert (04-2000 bis 11-2002).")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -696,7 +697,6 @@ with tab_black_swan:
 # ----------------- REITER 5: METHODENVERGLEICH -----------------
 with tab_methoden:
     st.header("Methodenvergleich: Historisch vs. Gaußsch vs. Lognormal")
-    st.info("Dieser Tab beleuchtet die Unterschiede in den Berechnungsmodellen. Während die historische und Lognormal-Methode 'Fat Tails' (extreme Ränder) besser abbilden können, unterschätzt die Gauß-Verteilung diese häufig.")
     
     st.write("---")
     
@@ -724,15 +724,21 @@ with tab_methoden:
    #Didaktischer Block
     if Info_modus:
         st.info("""
-        **Recency Bias vs. i.i.d.-Annahme**
-        
-        Vergleicht man lange Anlagehorizonte (5 bis 10 Jahre), zeigt die *Basic Historical Simulation (BHS)* oft selbst im Worst-Case-Szenario massive Gewinne an. Das BHS-Modell unterschätzt das tatsächliche Risiko hier aufgrund des **Recency Bias**: Es rechnet den beispiellosen Bullenmarkt der Tech-Giganten der letzten Dekade blind in die Zukunft fort. 
-        
-        Das **Historische Bootstrapping** liefert hier realistischere Tail-Risiken. Da es zufällig aus historischen Tagesrenditen zieht (mit Zurücklegen), kann es theoretisch extreme Verlusttage mehrmals hintereinander simulieren und so neue Stress-Pfade generieren, die in der reinen Historie nicht vorkamen. 
-        
-        **Der methodische Trade-off:** Während Bootstrapping die Ränder der Verteilung besser ausleuchtet, zwingt es die Daten in eine i.i.d.-Annahme (unabhängig und identisch verteilt). Dadurch wird das echte **Volatility Clustering** (Panik erzeugt weitere Panik) vollständig zerstört, welches im BHS-Modell intakt bleibt.
-        """)
+        Interpretation des Methodenvergleichs:
+        1. Basic Historical Simulation (BHS): Diese Methode basiert auf der Annahme, dass die historischen Renditen repräsentativ für die Zukunft sind. Bei einem MAG7-Portfolio wird Aufgrund eines Recency-Bias das Risiko (besonders bei längeren Horizonten) unterschätzt, da Tech-Werte in den letzen Jahren fast ausschließlich bullish waren. 
+        2. Historisches Bootstrapping: Diese Methode zieht mit Zurücklegen aus den historischen Renditen, um die Verteilung der Renditen an anhand von historischen Daten zu simulieren. Sie berücksichtigt die tatsächliche Verteilung der Renditen und schätzt den VaR basierend auf den simulierten Pfaden. Allerdins geht durch diese Simulation Voalitäts-Clustering verloren (Panik an der Börse erzeugt mehr Panik).
+        3. Gaußsche Methode: Diese Methode nimmt an, dass die Renditen normalverteilt sind, und berechnet den VaR analytisch basierend auf dem Mittelwert und der Standardabweichung der Renditen. Sie kann zu ungenauen Schätzungen führen, wenn die tatsächliche Renditeverteilung von der Normalverteilung abweicht, insbesondere wenn sie fette Tails oder Asymmetrie aufweist. Zudem unterschätzt sie das Risiko bei längeren Horizonten, da sie die Rendite linear mit Anzahl der Tagen skaliert, aber die Voalität nur mit sqrt(t). Dies führt besonders bei längeren Horizonten zu einer Unterschätzung des Riskos.
+        4. Lognormale Monte-Carlo-Simulation: Diese Methode simuliert zukünftige Renditen basierend auf einer lognormalen Verteilung, die durch die historischen Daten parametrisiert ist. Ähnlich wie bei der Gaußschen Methoden wird von einer (log)-Normalverteilung ausgegangen. Das Risiko kann unterschätz werden wenn die tatscähliche Verteilung Fat-Tails aufweißt. Auch hier werden Volatilitäts-Clustering nicht berücksichtigt.""")
 
+    if Info_modus:
+        st.info("""
+        Hinweis zum Methodenvergleich (Das Gauß-Paradoxon):
+
+        Warum zeigt die Gaußsche Methode im Histogramm oft das höchste Risiko (den größten Verlust bzw niedrigsten Gewinn), obwohl sie das Risiko theoretisch unterschätzen soltle?
+
+        * Historische Methoden(BHS & Bootstrapping):Nutzen reale Daten. Da die MAG7-Werte in den letzten Jahren fast nur gestiegen sind, fehlen in der echten Historie bearish-Szenarien. Die historischen Methoden können daher das Risiko unterschätzen.
+        * Gaußsche Methode:Ignoriert die Historie und baut eine perfekt symmetrische Glockenkurve. Da Tech-Aktien voaltiler (Schwankungen nach oben oder unten) sind , spiegelt das Modell diese Schwankungen mathematisch auf beiden Seiten der Glockenkurve. Die Gauß-Methode „erfindet“ also extreme Crash-Szenarien (Voalität der bullishen Phasen), die in den echten Daten so gar nicht passiert sind.
+        """)
     st.write("---")
 
     # ==========================
@@ -763,5 +769,32 @@ with tab_methoden:
         )
     st.plotly_chart(fig_density, use_container_width=True)
 
+# DYNAMISCHER INFO-BLOCK
+    if Info_modus:
+        st.info("""Interpretation der Dichteverteilung (dynamisch auf ausgewählten Horizont): """)
+        if days_density <= 252:
+            st.info("""
+            * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt.
+            * Historische Methoden: zeigen die tatsächliche Verteilung der P&L basierend auf historischen Daten.
+            * Lognormale Monte-Carlo-Simulation: zeigt die simulierte Verteilung basierend auf einer lognormalen Annahme, die durch die historischen Daten parametrisiert ist.
+            """)
+        elif days_density <= 1260:
+            st.info("""
+            * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt. Schwankungen nach oben werden mathematisch auch auf die Verlustseite geteilt. Fällt daher in diesem Verlgeich konservativ aus.
+            * BHS: zeigt zwei lokale Häufungen. Hier Zinserhöhung aus 2022 (Einbruch Tech-Werte) zu sonst bullishen Phasen.
+            * Lognormale Monte-Carlo-Simulation: Verteilung ist rechtsschief, da mathematisch kein negativer PnL möglich ist, allerdings können Gewinne nach oben unbegrenzt sein.
+            """)
 
+            st.info("""
+            * Extreme Änlichkeit MC-Sim und Bootstrapping gibt einen Hinweis auf die Robustheit der Schätzung. Es zeigt, dass die empirische Schätzung mit MC der Realität der historischen Daten wiederspiegelt.
+                    """)
+        else:
+            st.info("""
+            * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt. Schwankungen nach oben werden mathematisch auch auf die Verlustseite geteilt. Fällt daher in diesem Verlgeich konservativ aus.
+            * BHS: unterschätzt das Risiko extrem, da die Historie fast ausschließlich bullish war. Keine Garantie, dass Zukunft genauso bullish sein wird (Recency-Bias).
+            * Lognormale Monte-Carlo-Simulation: Verteilung ist rechtsschief, da mathematisch kein negativer PnL möglich ist, allerdings können Gewinne nach oben unbegrenzt sein.
+                    """)
 
+            st.info("""
+            * Extreme Änlichkeit MC-Sim und Bootstrapping gibt einen Hinweis auf die Robustheit der Schätzung. Es zeigt, dass die empirische Schätzung mit MC der Realität der historischen Daten wiederspiegelt.
+                    """)
