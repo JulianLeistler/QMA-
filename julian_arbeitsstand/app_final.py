@@ -559,13 +559,13 @@ def render_risk_tab(days, tab_title):
 
     if Info_modus:
         st.info("""
-        ** Interpretation von VaR und ES im PnL-Format**
+        Interpretation von VaR und ES im PnL-Format:
         
-        In diesem Dashboard werden der Value at Risk (VaR) und der Expected Shortfall (ES) strikt als **PnL (Profit and Loss)** relativ zum Startkapital ausgewiesen. Ein negatives Vorzeichen impliziert einen Verlust, ein positives Vorzeichen einen Gewinn.
+        In diesem Dashboard werden der Value at Risk (VaR) und der Expected Shortfall (ES) strikt als PnL (Profit and Loss) relativ zum Startkapital ausgewiesen. Ein negatives Vorzeichen impliziert einen Verlust, ein positives Vorzeichen einen Gewinn.
         
-        Negativer VaR (z.B. -10.000 $ bei 5 % VaR-Level): Dies bedeutet, dass unser Portfolio-Wert mit einer Wahrscheinlichkeit von 95 % nicht stärker fällt als um 10.000 $ vom Startkapital. In nur 5 Prozent der Fälle ist der Verlust größer.
-        Negativer ES (z.B. -15.000 $ bei 5 % VaR-Level): Der ES quantifiziert das Risiko jenseits des VaR. Dieser besagt: Wenn das 5 % Worst-Case-Szenario eintritt, liegt der durchschnittliche Verlust bei 15.000 $.
-        Positiver VaR (z.B. +10.000 $ bei 5 % VaR-Level): Dies bedeutet, dass selbst in dem ausgewählten Stress-Szenario keinen Verlust machen. Mit 95 prozentiger Wahrscheinlichkeit erzielen wir einen Gewinn von mindestens 10.000 $ über dem Startkapital.
+        Negativer VaR (z.B. -10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass unser Portfolio-Wert mit einer Wahrscheinlichkeit von 95 % nicht stärker fällt als um 10.000 USD vom Startkapital. In nur 5 Prozent der Fälle ist der Verlust größer.
+        Negativer ES (z.B. -15.000 USD bei 5 % VaR-Level): Der ES quantifiziert das Risiko jenseits des VaR. Dieser besagt: Wenn das 5 % Worst-Case-Szenario eintritt, liegt der durchschnittliche Verlust bei 15.000 USD.
+        Positiver VaR (z.B. +10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass selbst in dem ausgewählten Stress-Szenario keinen Verlust machen. Mit 95 prozentiger Wahrscheinlichkeit erzielen wir einen Gewinn von mindestens 10.000 USD über dem Startkapital.
         """)
 
     st.write("---") # Visuelle Trennung
@@ -609,7 +609,7 @@ st.sidebar.title("Magnificent 7: Risiko - Dashboard")
 start_capital = st.sidebar.number_input("Startkapital ($)", value=100_000, step=10_000)
 st.sidebar.markdown("---")
 Info_modus = st.sidebar.toggle("Info-Modus aktivieren", value=False)
-
+Note_Infomodus = st.info("Im Info-Modus werden zusätzliche Erklärungen und Interpretation geliefert. Nutzung nicht geeignet für stetiges an- und auschalten, da Perfomance von App darunter leiden könnte.")
 # Tabs
 tab_uebersicht, tab_1y, tab_5y, tab_10y, tab_black_swan, tab_methoden = st.tabs([
     "Übersicht", "1-Jahres-Risiko", "5-Jahres-Risiko", "10-Jahres-Risiko", "Black-Swan-Sim","Methodenvergleich"
