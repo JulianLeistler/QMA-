@@ -609,11 +609,13 @@ def render_risk_tab(days, tab_title):
 
 # Sidebar
 st.sidebar.title("Magnificent 7: Risiko - Dashboard")
+st.sidebar.markdown("---")
+st.sidebar.info("Datengrundlage: 18.Mai.2012 (ab META ehm. Facebook IPO) bis Ende 1. Quartal 2026.)")
+st.sidebar.markdown("---")
 start_capital = st.sidebar.number_input("Startkapital ($)", value=100_000, step=10_000)
 st.sidebar.markdown("---")
 Info_modus = st.sidebar.toggle("Info-Modus aktivieren", value=False)
 Note_Infomodus = st.sidebar.info("Im Info-Modus werden zusätzliche Erklärungen und Interpretation geliefert. Nutzung nicht geeignet für stetiges an- und auschalten, da Perfomance von App darunter leiden könnte.")
-# Tabs
 tab_uebersicht, tab_1y, tab_5y, tab_10y, tab_black_swan, tab_methoden = st.tabs([
     "Übersicht", "1-Jahres-Risiko", "5-Jahres-Risiko", "10-Jahres-Risiko", "Black-Swan-Sim","Methodenvergleich"
 ])
