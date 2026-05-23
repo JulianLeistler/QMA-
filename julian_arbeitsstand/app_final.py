@@ -609,8 +609,7 @@ def render_risk_tab(days, tab_title):
 
 # Sidebar
 st.sidebar.title("Magnificent 7: Risiko - Dashboard")
-st.sidebar.markdown("---")
-st.sidebar.info("Datengrundlage: 18.Mai.2012 (ab META ehm. Facebook IPO) bis Ende 1. Quartal 2026.)")
+st.sidebar.write("Datengrundlage: 18.Mai.2012 (ab META ehm. Facebook IPO) bis Ende 1. Quartal 2026.)")
 st.sidebar.markdown("---")
 start_capital = st.sidebar.number_input("Startkapital ($)", value=100_000, step=10_000)
 st.sidebar.markdown("---")
