@@ -639,10 +639,10 @@ with tab_uebersicht:
 
     time_options = {
     "Max (ab 2012)": None,
-    "10 Jahre": 10,
-    "5 Jahre": 5,
+    "1 Jahr": 1,
     "3 Jahre": 3,
-    "1 Jahr": 1}
+    "5 Jahre": 5,
+    "10 Jahre": 10}
 
     selected_time_label = st.selectbox("Betrachtungszeitraum anpassen:", list(time_options.keys()), index=0)
 
