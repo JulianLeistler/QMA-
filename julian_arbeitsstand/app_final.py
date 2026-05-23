@@ -278,10 +278,11 @@ def plot_historical_performance(portfolio_returns, market_returns, sp500_returns
     sp500_growth = start_capital * (1 + aligned_data['S&P 500']).cumprod()
     nasdaq_growth = start_capital * (1 + aligned_data['NASDAQ']).cumprod()
 
-    portfolio_growth.loc[aligned_data.index[0] - pd.Timedelta(days=1)] = start_capital
-    market_growth.loc[aligned_data.index[0] - pd.Timedelta(days=1)] = start_capital
-    sp500_growth.loc[aligned_data.index[0] - pd.Timedelta(days=1)] = start_capital
-    nasdaq_growth.loc[aligned_data.index[0] - pd.Timedelta(days=1)] = start_capital
+    t_zero = aligned_data.index[0] - pd.Timedelta(days=1)
+    portfolio_growth.loc[t_zero] = start_capital
+    market_growth.loc[t_zero] = start_capital
+    sp500_growth.loc[t_zero] = start_capital
+    nasdaq_growth.loc[t_zero] = start_capital
 
     portfolio_growth = portfolio_growth.sort_index()
     market_growth = market_growth.sort_index()
@@ -634,12 +635,42 @@ with tab_uebersicht:
     sp500_returns = bench_sp500.pct_change().dropna()
     nasdaq_returns = bench_nasdaq.pct_change().dropna()
 
-    
+    st.subheader("Historische Performance & Benchmark-Vergleich")
+
+    time_options = {
+    "Max (ab 2012)": None,
+    "10 Jahre": 10,
+    "5 Jahre": 5,
+    "3 Jahre": 3,
+    "1 Jahr": 1}
+
+    selected_time_label = st.selectbox("Betrachtungszeitraum anpassen:", list(time_options.keys()), index=0)
+
+    years_to_subtract = time_options[selected_time_label]
+
+    if years_to_subtract is not None:
+        # Ankerpunkt ist das maximale im Datensatz vorhandene Datum
+        max_date = port_ret_discrete.index.max()
+        filter_start_date = max_date - pd.DateOffset(years=years_to_subtract)
+        # Effizientes Slicing via .loc
+        filtered_port_ret = port_ret_discrete.loc[filter_start_date:]
+        filtered_mkt_returns = bench_world.pct_change().dropna().loc[filter_start_date:]
+        filtered_sp500_returns = bench_sp500.pct_change().dropna().loc[filter_start_date:]
+        filtered_nasdaq_returns = bench_nasdaq.pct_change().dropna().loc[filter_start_date:]
+        chart_title = f"Performance MAG7 vs. Benchmarks (Letzte {selected_time_label})"
+    else:
+        # Maximale Historie (kein Slicing erforderlich)
+        filtered_port_ret = port_ret_discrete
+        filtered_mkt_returns = bench_world.pct_change().dropna()
+        filtered_sp500_returns = bench_sp500.pct_change().dropna()
+        filtered_nasdaq_returns = bench_nasdaq.pct_change().dropna()
+        chart_title = "Performance MAG7 vs. Benchmarks (Gesamter Zeitraum ab 2012)"
+
     fig_hist = plot_historical_performance(
-     portfolio_returns = port_ret_discrete, 
-     market_returns = mkt_returns, 
-     sp500_returns = sp500_returns,
-     nasdaq_returns = nasdaq_returns,
+     portfolio_returns = filtered_port_ret, 
+     market_returns = filtered_mkt_returns, 
+     sp500_returns = filtered_sp500_returns,
+     nasdaq_returns = filtered_nasdaq_returns,
      start_capital = start_capital,
      title = "Performance MAG7 vs. Markt vs. SP500 vs. NASDAQ (2012-2026)"
  )
@@ -739,7 +770,7 @@ with tab_methoden:
 
         Hinweis zum Methodenvergleich (Das Gauß-Paradoxon):
 
-        Warum zeigt die Gaußsche Methode im Histogramm oft das höchste Risiko (den größten Verlust bzw niedrigsten Gewinn), obwohl sie das Risiko theoretisch unterschätzen soltle?
+        Warum zeigt die Gaußsche Methode im Histogramm oft das höchste Risiko (den größten Verlust bzw niedrigsten Gewinn), obwohl sie das Risiko theoretisch unterschätzen sollte?
 
         * Historische Methoden(BHS & Bootstrapping):Nutzen reale Daten. Da die MAG7-Werte in den letzten Jahren fast nur gestiegen sind, fehlen in der echten Historie bearish-Szenarien. Die historischen Methoden können daher das Risiko unterschätzen.
         * Gaußsche Methode:Ignoriert die Historie und baut eine perfekt symmetrische Glockenkurve. Da Tech-Aktien voaltiler (Schwankungen nach oben oder unten) sind , spiegelt das Modell diese Schwankungen mathematisch auf beiden Seiten der Glockenkurve. Die Gauß-Methode „erfindet“ also extreme Crash-Szenarien (Voalität der bullishen Phasen), die in den echten Daten so gar nicht passiert sind.""")
