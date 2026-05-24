@@ -732,7 +732,7 @@ with tab_black_swan:
         st.info("""
         Interpretation der Black-Swan-Simulation:
         * Median-Vergleich: Der Vergleich der Median-Pfade zwischen Normal- und Black-Swan-Simulation zeigt, dass selbst der "durchschnittliche" Pfad im Black-Swan-Szenario deutlich schlechter abschneidet als im normalen Szenario, was die systematischen Auswirkungen solcher Ereignisse auf die Portfolio-Performance verdeutlicht.
-        * Black-Swan-Abrutsch: Der Absturz am rechten Rand des Charts in der Black-Swan-Sim ist zu erklären, da der Crash nicht nur einfach an Tag 1 modelliert ist sonder als zufällig eintretendes Event im Horizont verteilt ist. Je länger die Simulation dauert desto mehr der "guten" Jahren werden durch die "schlechten" Bedingungen des Black-Swan zunichtegemacht. Am Anfang der Analyse sind die absoluten Werte noch realtiv klein, aber über die Zeit "frisst" sich der Effekt tiefer in die Vermögensentwicklung. Dieser Effekt führt zu einem stärkeren Abrutschen der Werte am Ende des Horizonts. 
+        * Black-Swan-Abrutsch: Der Absturz am rechten Rand des Charts in der Black-Swan-Sim ist zu erklären, da der Crash nicht nur einfach an Tag 1 modelliert ist sondern als zufällig eintretendes Event im Horizont verteilt ist. Je länger die Simulation dauert desto mehr der "guten" Jahren werden durch die "schlechten" Bedingungen des Black-Swan zunichtegemacht. Am Anfang der Analyse sind die absoluten Werte noch relativ klein, aber über die Zeit "frisst" sich der Effekt tiefer in die Vermögensentwicklung. Dieser Effekt führt zu einem stärkeren Abrutschen der Werte am Ende des Horizonts. 
         """)
 # ----------------- REITER 5: METHODENVERGLEICH -----------------
 with tab_methoden:
