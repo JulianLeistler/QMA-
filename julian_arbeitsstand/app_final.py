@@ -419,22 +419,20 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     mu_g = clean_disc.mean() * days
     sigma_g = clean_disc.std(ddof=1) * np.sqrt(days)
 
-    # 4. Lognormal MC
-    _, _, final_values_mc, _ = calculate_monte_carlo_risk(
-        portfolio_returns_log, start_capital, alpha, days,
-        simulations=simulations_boot, black_swan=False,
-    )
-    mc_pnl = final_values_mc - start_capital
+    # 4. Lognormal
+    final_values_mc, _ = calculate_lognormal_risk(
+        portfolio_returns_log, start_capital, alpha, days)
+    log_pnl = final_values_mc - start_capital
 
     # Gemeinsames x-Grid
-    x_lo = float(min(hist_pnl_bhs.min() if len(hist_pnl_bhs) > 0 else 0, hist_pnl_boot.min(), mc_pnl.min(), (mu_g - 4*sigma_g)*start_capital))
-    x_hi = float(max(hist_pnl_bhs.max() if len(hist_pnl_bhs) > 0 else 0, hist_pnl_boot.max(), mc_pnl.max(), (mu_g + 4*sigma_g)*start_capital))
+    x_lo = float(min(hist_pnl_bhs.min() if len(hist_pnl_bhs) > 0 else 0, hist_pnl_boot.min(), log_pnl.min(), (mu_g - 4*sigma_g)*start_capital))
+    x_hi = float(max(hist_pnl_bhs.max() if len(hist_pnl_bhs) > 0 else 0, hist_pnl_boot.max(), log_pnl.max(), (mu_g + 4*sigma_g)*start_capital))
     x_grid_C = np.linspace(x_lo, x_hi, 500)
 
     # KDEs für Hist (BHS), Bootstrapping und MC
     kde_hist_bhs = stats.gaussian_kde(hist_pnl_bhs) if len(hist_pnl_bhs) > 1 else None
     kde_hist_boot = stats.gaussian_kde(hist_pnl_boot)
-    kde_mc = stats.gaussian_kde(mc_pnl)
+    kde_mc = stats.gaussian_kde(log_pnl)
     
     density_hist_bhs = kde_hist_bhs(x_grid_C) if kde_hist_bhs else np.zeros_like(x_grid_C)
     density_hist_boot = kde_hist_boot(x_grid_C)
@@ -447,7 +445,7 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     var_bhs, _ = calculate_historical_risk(portfolio_returns_log, start_capital, alpha, days)
     var_boot, _ = calculate_bootstrap_risk(portfolio_returns_log, start_capital, alpha, days, simulations=simulations_boot)
     var_gauss, _ = calculate_gaussian_risk(portfolio_returns_discrete, start_capital, alpha, days)
-    var_log, _, _, _ = calculate_lognormal_risk(portfolio_returns_log, start_capital, alpha, days, simulations=simulations_boot)
+    var_log, _= calculate_lognormal_risk(portfolio_returns_log, start_capital, alpha, days, simulations=simulations_boot)
     
     # Farbschema passend zur Präsentationslogik
     colors = {
