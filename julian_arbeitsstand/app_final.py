@@ -834,6 +834,7 @@ with tab_methoden:
                     """)
         else:
             st.info("""
+            * Gaußsche Methode: zeigt aufgrund von der Visualisierung keine perfekte Glockenkurve, allerdings ist diese Verteilung mathematisch weiterhin gegeben.
             * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt. Schwankungen nach oben werden mathematisch auch auf die Verlustseite geteilt. Fällt daher in diesem Verlgeich konservativ aus.
             * BHS: unterschätzt das Risiko extrem, da die Historie fast ausschließlich bullish war. Keine Garantie, dass Zukunft genauso bullish sein wird (Recency-Bias).
             * Lognormale Monte-Carlo-Simulation: Verteilung ist rechtsschief, da mathematisch kein negativer PnL möglich ist, allerdings können Gewinne nach oben unbegrenzt sein.
