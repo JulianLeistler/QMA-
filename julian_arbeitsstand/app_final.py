@@ -506,11 +506,11 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     
     #dynamische x-Achse
 
-    zoom_min = min_var * 1.3  
+    zoom_min = min_var * 1 
     if days <= 252:
-        zoom_max = start_capital * 0.5  
+        zoom_max = start_capital * 3 
     else:
-        zoom_max = start_capital * 1.5
+        zoom_max = start_capital * 5
 
 
     fig_pC.update_layout(
