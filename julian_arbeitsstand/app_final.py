@@ -419,24 +419,32 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     mu_g = clean_disc.mean() * days
     sigma_g = clean_disc.std(ddof=1) * np.sqrt(days)
 
-    # 4. Lognormal
-    final_values_log, _ = calculate_lognormal_risk(
-        portfolio_returns_log, start_capital, alpha, days)
-    log_pnl = final_values_log - start_capital
+    # 4. Lognormal MC (Wieder aktiv)
+    _, _, final_values_mc, _ = calculate_monte_carlo_risk(
+        portfolio_returns_log, start_capital, alpha, days,
+        simulations=simulations_boot, black_swan=False,
+    )
+    mc_pnl = final_values_mc - start_capital
 
     # Gemeinsames x-Grid
-    x_lo = float(min(hist_pnl_bhs.min() if len(hist_pnl_bhs) > 0 else 0, hist_pnl_boot.min(), log_pnl.min(), (mu_g - 4*sigma_g)*start_capital))
-    x_hi = float(max(hist_pnl_bhs.max() if len(hist_pnl_bhs) > 0 else 0, hist_pnl_boot.max(), log_pnl.max(), (mu_g + 4*sigma_g)*start_capital))
+    x_lo = float(min(hist_pnl_bhs.min() if len(hist_pnl_bhs) > 0 else 0, hist_pnl_boot.min(), mc_pnl.min(), (mu_g - 4*sigma_g)*start_capital))
+    x_hi = float(max(hist_pnl_bhs.max() if len(hist_pnl_bhs) > 0 else 0, hist_pnl_boot.max(), mc_pnl.max(), (mu_g + 4*sigma_g)*start_capital))
     x_grid_C = np.linspace(x_lo, x_hi, 500)
 
     # KDEs für Hist (BHS), Bootstrapping und MC
-    kde_hist_bhs = stats.gaussian_kde(hist_pnl_bhs) if len(hist_pnl_bhs) > 1 else None
+    # FIX: Absicherung für BHS bei langen Horizonten (verhindert den ValueError)
+    if len(hist_pnl_bhs) > 1:
+        kde_hist_bhs = stats.gaussian_kde(hist_pnl_bhs)
+        density_hist_bhs = kde_hist_bhs(x_grid_C)
+    else:
+        kde_hist_bhs = None
+        density_hist_bhs = np.zeros_like(x_grid_C)
+        
     kde_hist_boot = stats.gaussian_kde(hist_pnl_boot)
-    kde_log = stats.gaussian_kde(log_pnl)
+    kde_mc = stats.gaussian_kde(mc_pnl)
     
-    density_hist_bhs = kde_hist_bhs(x_grid_C) if kde_hist_bhs else np.zeros_like(x_grid_C)
     density_hist_boot = kde_hist_boot(x_grid_C)
-    density_log = kde_log(x_grid_C)
+    density_mc = kde_mc(x_grid_C)
 
     # Gauss-Dichte
     gauss_density = stats.norm.pdf(x_grid_C / start_capital, loc=mu_g, scale=sigma_g) / start_capital
@@ -445,19 +453,19 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     var_bhs, _ = calculate_historical_risk(portfolio_returns_log, start_capital, alpha, days)
     var_boot, _ = calculate_bootstrap_risk(portfolio_returns_log, start_capital, alpha, days, simulations=simulations_boot)
     var_gauss, _ = calculate_gaussian_risk(portfolio_returns_discrete, start_capital, alpha, days)
-    var_log, _= calculate_lognormal_risk(portfolio_returns_log, start_capital, alpha, days)
+    var_mc, _, _, _ = calculate_monte_carlo_risk(portfolio_returns_log, start_capital, alpha, days, simulations=simulations_boot)
     
     # Farbschema passend zur Präsentationslogik
     colors = {
         'BHS': 'rgb(133, 193, 233)',          
         'Boot': 'rgb(41, 128, 185)', 
         'Gauss': 'rgb(231, 76, 60)',                     
-        'LOG': 'rgb(35, 155, 86)'               
+        'MC': 'rgb(35, 155, 86)'               
     }
 
     fig_pC = go.Figure()
     
-    if len(hist_pnl_bhs) > 1:
+    if kde_hist_bhs is not None:
         fig_pC.add_trace(go.Scatter(
             x=x_grid_C, y=density_hist_bhs, mode='lines',
             line=dict(color=colors['BHS'], width=2.2), name='Historisch (BHS)'
@@ -472,8 +480,8 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
         line=dict(color=colors['Gauss'], width=2.2), name='Gaußsch'
     ))
     fig_pC.add_trace(go.Scatter(
-        x=x_grid_C, y=density_log, mode='lines',
-        line=dict(color=colors['LOG'], width=2.2), name='Lognormal'
+        x=x_grid_C, y=density_mc, mode='lines',
+        line=dict(color=colors['MC'], width=2.2), name='Lognormal (MC)'
     ))
     
     # VaR Linien mit gestaffelten Beschriftungen
@@ -490,20 +498,19 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     fig_pC.add_annotation(x=var_gauss, y=0.81, yref='paper', text=f"Gaußsch: ${var_gauss:,.0f}", 
                           showarrow=False, font=dict(color=colors['Gauss'], size=11), xanchor='left')
 
-    fig_pC.add_vline(x=var_log, line=dict(color=colors['LOG'], width=1.5, dash='dash'))
-    fig_pC.add_annotation(x=var_log, y=0.74, yref='paper', text=f"LOG: ${var_log:,.0f}", 
-                          showarrow=False, font=dict(color=colors['LOG'], size=11), xanchor='right')
+    fig_pC.add_vline(x=var_mc, line=dict(color=colors['MC'], width=1.5, dash='dash'))
+    fig_pC.add_annotation(x=var_mc, y=0.74, yref='paper', text=f"MC: ${var_mc:,.0f}", 
+                          showarrow=False, font=dict(color=colors['MC'], size=11), xanchor='right')
 
     conf_str = f"{(1-alpha)*100:.0f}"
 
-    #dynamische x-Achse
+    # Dynamische X-Achsen-Obergrenze (Kein Abschneiden der Verlustseite nach unten!)
     if days <= 252:
         zoom_max = start_capital * 3 
     elif days <= 1260:
         zoom_max = start_capital * 10
     else:
         zoom_max = start_capital * 60
-
 
     fig_pC.update_layout(
         template='plotly_dark',
