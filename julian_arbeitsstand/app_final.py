@@ -420,9 +420,9 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     sigma_g = clean_disc.std(ddof=1) * np.sqrt(days)
 
     # 4. Lognormal
-    final_values_mc, _ = calculate_lognormal_risk(
+    final_values_log, _ = calculate_lognormal_risk(
         portfolio_returns_log, start_capital, alpha, days)
-    log_pnl = final_values_mc - start_capital
+    log_pnl = final_values_log - start_capital
 
     # Gemeinsames x-Grid
     x_lo = float(min(hist_pnl_bhs.min() if len(hist_pnl_bhs) > 0 else 0, hist_pnl_boot.min(), log_pnl.min(), (mu_g - 4*sigma_g)*start_capital))
@@ -445,7 +445,7 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     var_bhs, _ = calculate_historical_risk(portfolio_returns_log, start_capital, alpha, days)
     var_boot, _ = calculate_bootstrap_risk(portfolio_returns_log, start_capital, alpha, days, simulations=simulations_boot)
     var_gauss, _ = calculate_gaussian_risk(portfolio_returns_discrete, start_capital, alpha, days)
-    var_log, _= calculate_lognormal_risk(portfolio_returns_log, start_capital, alpha, days, simulations=simulations_boot)
+    var_log, _= calculate_lognormal_risk(portfolio_returns_log, start_capital, alpha, days)
     
     # Farbschema passend zur Präsentationslogik
     colors = {
