@@ -505,12 +505,12 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     min_var = min(all_vars) if all_vars else -0.2 * start_capital
     
     #dynamische x-Achse
-
-    zoom_min = min_var * 5
     if days <= 252:
         zoom_max = start_capital * 3 
+    elif days <= 1260:
+        zoom_max = start_capital * 10
     else:
-        zoom_max = start_capital * 15
+        zoom_max = start_capital * 30
 
 
     fig_pC.update_layout(
@@ -520,7 +520,7 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
         yaxis_title='Wahrscheinlichkeitsdichte',
         height=520,
         hovermode='x unified',
-        xaxis=dict(range=[zoom_min, zoom_max])
+        xaxis=dict(range=[x_lo, zoom_max])
     )
     
     return fig_pC
