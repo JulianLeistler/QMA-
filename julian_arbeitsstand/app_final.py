@@ -230,7 +230,7 @@ def get_comparison_data(log_ret, discrete_ret, capital):
             g_var, _ = calculate_gaussian_risk(discrete_ret, capital, alpha, days)
             
             # 3. Lognormal Simulation (ohne Black Swan Event)
-            mc_var, _, _, _ = calculate_monte_carlo_risk(
+            log_var, _, _, _ =calculate_lognormal_risk(
                 log_ret, capital, alpha, days, 
                 simulations=10000, black_swan=False
             )
@@ -240,7 +240,7 @@ def get_comparison_data(log_ret, discrete_ret, capital):
                 {"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Historisch (BHS)", "VaR ($)": bhs_var},
                 {"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Historisch (Bootstrapping)", "VaR ($)": boot_var},
                 {"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Gaußsch", "VaR ($)": g_var},
-                {"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Lognormal (MC)", "VaR ($)": mc_var}
+                {"Horizont": h_name, "Konfidenz": lvl_name, "Methode": "Lognormal", "VaR ($)": log_var}
             ])
             
     return pd.DataFrame(results)
@@ -345,14 +345,14 @@ def plot_var_bar_comparison(df_comparison, horizons, levels_to_show):
         'Historisch (BHS)', 
         'Historisch (Bootstrapping)', 
         'Gaußsch', 
-        'Lognormal (MC)'
+        'Lognormal'
     ]
     
     method_colors = {
         'Historisch (BHS)': 'rgb(133, 193, 233)',
         'Historisch (Bootstrapping)': 'rgb(41, 128, 185)',
         'Gaußsch': 'rgb(231, 76, 60)',
-        'Lognormal (MC)': 'rgb(35, 155, 86)'
+        'Lognormal': 'rgb(35, 155, 86)'
     }
 
     fig_p2 = make_subplots(
@@ -450,14 +450,14 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     var_bhs, _ = calculate_historical_risk(portfolio_returns_log, start_capital, alpha, days)
     var_boot, _ = calculate_bootstrap_risk(portfolio_returns_log, start_capital, alpha, days, simulations=simulations_boot)
     var_gauss, _ = calculate_gaussian_risk(portfolio_returns_discrete, start_capital, alpha, days)
-    var_mc, _, _, _ = calculate_monte_carlo_risk(portfolio_returns_log, start_capital, alpha, days, simulations=simulations_boot)
+    var_log, _, _, _ = calculate_lognormal_risk(portfolio_returns_log, start_capital, alpha, days, simulations=simulations_boot)
     
     # Farbschema passend zur Präsentationslogik
     colors = {
         'BHS': 'rgb(133, 193, 233)',          
         'Boot': 'rgb(41, 128, 185)', 
         'Gauss': 'rgb(231, 76, 60)',                     
-        'MC': 'rgb(35, 155, 86)'               
+        'LOG': 'rgb(35, 155, 86)'               
     }
 
     fig_pC = go.Figure()
@@ -478,7 +478,7 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     ))
     fig_pC.add_trace(go.Scatter(
         x=x_grid_C, y=density_mc, mode='lines',
-        line=dict(color=colors['MC'], width=2.2), name='Lognormal (MC)'
+        line=dict(color=colors['LOG'], width=2.2), name='Lognormal (MC)'
     ))
     
     # VaR Linien mit gestaffelten Beschriftungen
@@ -495,15 +495,12 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     fig_pC.add_annotation(x=var_gauss, y=0.81, yref='paper', text=f"Gaußsch: ${var_gauss:,.0f}", 
                           showarrow=False, font=dict(color=colors['Gauss'], size=11), xanchor='left')
 
-    fig_pC.add_vline(x=var_mc, line=dict(color=colors['MC'], width=1.5, dash='dash'))
-    fig_pC.add_annotation(x=var_mc, y=0.74, yref='paper', text=f"MC: ${var_mc:,.0f}", 
-                          showarrow=False, font=dict(color=colors['MC'], size=11), xanchor='right')
+    fig_pC.add_vline(x=var_log, line=dict(color=colors['LOG'], width=1.5, dash='dash'))
+    fig_pC.add_annotation(x=var_log, y=0.74, yref='paper', text=f"LOG: ${var_log:,.0f}", 
+                          showarrow=False, font=dict(color=colors['LOG'], size=11), xanchor='right')
 
     conf_str = f"{(1-alpha)*100:.0f}"
 
-    all_vars = [v for v in [var_bhs, var_boot, var_gauss, var_mc] if not np.isnan(v)]
-    min_var = min(all_vars) if all_vars else -0.2 * start_capital
-    
     #dynamische x-Achse
     if days <= 252:
         zoom_max = start_capital * 3 
@@ -773,10 +770,12 @@ with tab_methoden:
         Interpretation des Methodenvergleichs:
         1. Basic Historical Simulation (BHS): Diese Methode basiert auf der Annahme, dass die historischen Renditen repräsentativ für die Zukunft sind. Bei einem MAG7-Portfolio wird Aufgrund eines Recency-Bias das Risiko (besonders bei längeren Horizonten) unterschätzt, da Tech-Werte in den letzen Jahren fast ausschließlich bullish waren. 
         2. Historisches Bootstrapping: Diese Methode zieht mit Zurücklegen aus den historischen Renditen, um die Verteilung der Renditen an anhand von historischen Daten zu simulieren. Sie berücksichtigt die tatsächliche Verteilung der Renditen und schätzt den VaR basierend auf den simulierten Pfaden. Allerdings geht durch diese Simulation Volatilität-Cluster verloren (Panik an der Börse erzeugt mehr Panik).
-        3. Gaußsche Methode: Diese Methode nimmt an, dass die Renditen normalverteilt sind, und berechnet den VaR analytisch basierend auf dem Mittelwert und der Standardabweichung der Renditen. Sie kann zu ungenauen Schätzungen führen, wenn die tatsächliche Renditeverteilung von der Normalverteilung abweicht, insbesondere wenn sie fette Tails oder Asymmetrie aufweist. Zudem unterschätzt sie das Risiko bei längeren Horizonten, da sie die Rendite linear mit Anzahl der Tage skaliert, aber die Volatilität nur mit sqrt(t). Dies führt besonders bei längeren Horizonten zu einer Unterschätzung des Riskos.
-        4. Lognormale Monte-Carlo-Simulation: Diese Methode simuliert zukünftige Renditen basierend auf einer lognormalen Verteilung, die durch die historischen Daten parametrisiert ist. Ähnlich wie bei der Gaußschen Methoden wird von einer (log)-Normalverteilung ausgegangen. Das Risiko kann unterschätz werden wenn die tatsächliche Verteilung Fat-Tails aufweist. Auch hier werden Volatilitäts-Clustering nicht berücksichtigt.
+        3. Gaußsche Methode: Diese Methode nimmt an, dass die Renditen normalverteilt sind, und berechnet den VaR analytisch basierend auf dem Mittelwert und der Standardabweichung der Renditen. Sie kann zu ungenauen Schätzungen führen, wenn die tatsächliche Renditeverteilung von der Normalverteilung abweicht, insbesondere wenn sie fette Tails oder Asymmetrie aufweist.
+        4. Lognormal Methode: Dieses Modell geht davon aus, dass die täglichen Log-Renditen normalverteilt sind. Der große Vorteil gegenüber der Gaußschen Methode ist, dass ein Portfolio niemals weniger als Null wert sein kann . Durch den Zinseszinseffekt ist die Verteilung rechtsschief. Das bedeutet, dass Gewinne nach oben hin unbegrenzt wachsen, während Verluste auf maximal 100 % (Totalverlust) begrenzt sind. Die Ergebnisse ähneln sich stark den der Monte-Carlo-Simulation.
+        """)
 
-        Hinweis zum Methodenvergleich (Das Gauß-Paradoxon):
+        st.info("""
+        Hinweis zum Methodenvergleich:
 
         Warum zeigt die Gaußsche Methode im Histogramm oft das höchste Risiko (den größten Verlust bzw niedrigsten Gewinn), obwohl sie das Risiko theoretisch unterschätzen sollte?
 
@@ -820,13 +819,13 @@ with tab_methoden:
             st.info("""
             * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt.
             * Historische Methoden: zeigen die tatsächliche Verteilung der P&L basierend auf historischen Daten.
-            * Lognormale Monte-Carlo-Simulation: zeigt die simulierte Verteilung basierend auf einer lognormalen Annahme, die durch die historischen Daten parametrisiert ist.
+            * Lognormale Methode: zeigt die Verteilung basierend auf einer lognormalen Annahme.
             """)
         elif days_density <= 1260:
             st.info("""
             * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt. Schwankungen nach oben werden mathematisch auch auf die Verlustseite geteilt. Fällt daher in diesem Verlgeich konservativ aus.
             * BHS: zeigt zwei lokale Häufungen. Hier Zinserhöhung aus 2022 (Einbruch Tech-Werte) zu sonst bullishen Phasen.
-            * Lognormale Monte-Carlo-Simulation: Verteilung ist rechtsschief, da mathematisch kein negativer PnL möglich ist, allerdings können Gewinne nach oben unbegrenzt sein.
+            * Lognormale Methode: Verteilung ist rechtsschief, da mathematisch kein negativer PnL möglich ist, allerdings können Gewinne nach oben unbegrenzt sein.
             """)
 
             st.info("""
@@ -837,9 +836,6 @@ with tab_methoden:
             * Gaußsche Methode: zeigt aufgrund von der Visualisierung keine perfekte Glockenkurve, allerdings ist diese Verteilung mathematisch weiterhin gegeben.
             * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt. Schwankungen nach oben werden mathematisch auch auf die Verlustseite geteilt. Fällt daher in diesem Verlgeich konservativ aus.
             * BHS: unterschätzt das Risiko extrem, da die Historie fast ausschließlich bullish war. Keine Garantie, dass Zukunft genauso bullish sein wird (Recency-Bias).
-            * Lognormale Monte-Carlo-Simulation: Verteilung ist rechtsschief, da mathematisch kein negativer PnL möglich ist, allerdings können Gewinne nach oben unbegrenzt sein.
+            * Lognormale Methode: Verteilung ist rechtsschief, da mathematisch kein negativer PnL möglich ist, allerdings können Gewinne nach oben unbegrenzt sein.
                     """)
 
-            st.info("""
-            * Extreme Änlichkeit MC-Sim und Bootstrapping gibt einen Hinweis auf die Robustheit der Schätzung. Es zeigt, dass die empirische Schätzung mit MC der Realität der historischen Daten wiederspiegelt.
-                    """)
