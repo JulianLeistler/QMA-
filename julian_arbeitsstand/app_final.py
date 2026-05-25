@@ -432,11 +432,11 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     # KDEs für Hist (BHS), Bootstrapping und MC
     kde_hist_bhs = stats.gaussian_kde(hist_pnl_bhs) if len(hist_pnl_bhs) > 1 else None
     kde_hist_boot = stats.gaussian_kde(hist_pnl_boot)
-    kde_mc = stats.gaussian_kde(log_pnl)
+    kde_log = stats.gaussian_kde(log_pnl)
     
     density_hist_bhs = kde_hist_bhs(x_grid_C) if kde_hist_bhs else np.zeros_like(x_grid_C)
     density_hist_boot = kde_hist_boot(x_grid_C)
-    density_mc = kde_mc(x_grid_C)
+    density_mc = kde_log(x_grid_C)
 
     # Gauss-Dichte
     gauss_density = stats.norm.pdf(x_grid_C / start_capital, loc=mu_g, scale=sigma_g) / start_capital
@@ -473,7 +473,7 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     ))
     fig_pC.add_trace(go.Scatter(
         x=x_grid_C, y=density_mc, mode='lines',
-        line=dict(color=colors['LOG'], width=2.2), name='Lognormal (MC)'
+        line=dict(color=colors['LOG'], width=2.2), name='Lognormal'
     ))
     
     # VaR Linien mit gestaffelten Beschriftungen
