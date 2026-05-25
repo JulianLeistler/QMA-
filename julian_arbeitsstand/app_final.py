@@ -232,7 +232,7 @@ def get_comparison_data(log_ret, discrete_ret, capital):
             # 3. Lognormal Simulation (ohne Black Swan Event)
             log_var, _, _, _ =calculate_lognormal_risk(
                 log_ret, capital, alpha, days, 
-                simulations=10000, black_swan=False
+                black_swan=False
             )
             
             # Daten im exakten Format für die Plotly-Methode aggregieren
