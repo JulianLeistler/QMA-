@@ -510,7 +510,7 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
     elif days <= 1260:
         zoom_max = start_capital * 10
     else:
-        zoom_max = start_capital * 100
+        zoom_max = start_capital * 60
 
 
     fig_pC.update_layout(
