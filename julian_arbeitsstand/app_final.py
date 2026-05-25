@@ -501,11 +501,17 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
 
     conf_str = f"{(1-alpha)*100:.0f}"
 
-    # Dynamischer Zoom auf die X-Achse
-    mc_cutoff = np.percentile(mc_pnl, 95)
-    hist_cutoff = hist_pnl_boot.max()
-    zoom_max = max(mc_cutoff, hist_cutoff)
-    zoom_max = max(zoom_max, start_capital * 0.5)
+    all_vars = [v for v in [var_bhs, var_boot, var_gauss, var_mc] if not np.isnan(v)]
+    min_var = min(all_vars) if all_vars else -0.2 * start_capital
+    
+    #dynamische x-Achse
+
+    zoom_min = min_var * 1.3  
+    if days <= 252:
+        zoom_max = start_capital * 0.5  
+    else:
+        zoom_max = start_capital * 1.5
+
 
     fig_pC.update_layout(
         template='plotly_dark',
@@ -514,7 +520,7 @@ def plot_density_comparison(portfolio_returns_log, portfolio_returns_discrete, s
         yaxis_title='Wahrscheinlichkeitsdichte',
         height=520,
         hovermode='x unified',
-        xaxis=dict(range=[x_lo, zoom_max])
+        xaxis=dict(range=[zoom_min, zoom_max])
     )
     
     return fig_pC
