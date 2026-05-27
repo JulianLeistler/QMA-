@@ -537,6 +537,18 @@ def format_currency(value):
         return f"${value / 1_000:.2f}k"
     else:
         return f"${value:.2f}"
+    
+def calculate_pct_delta(val_a, val_b):
+    """
+    Berechnet die prozentuale Änderung von Wert A zu Wert B.
+    Da VaR/ES als PnL (negativ für Verlust) vorliegen, 
+    liefert die Formel korrekte relative Änderungen.
+    """
+    if np.isnan(val_a) or np.isnan(val_b) or val_a == 0:
+        return None
+    return ((val_b - val_a) / abs(val_a)) * 100
+
+# Risk Tab Helper Function
 
 def render_risk_tab(days, tab_title):
     st.header(tab_title)
@@ -588,18 +600,39 @@ def render_risk_tab(days, tab_title):
     g_var_b, g_es_b = calculate_gaussian_risk(port_ret_discrete, start_capital, alpha_b, days)
     mc_var_b, mc_es_b, _, paths_b = calculate_monte_carlo_risk(port_ret_log, start_capital, alpha_b, days, simulations=2000, black_swan=False)
     
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("BHS VaR", format_currency(bhs_var_b))
-    c1.metric("BHS ES", format_currency(bhs_es_b))
-    c2.metric("Hist. Bootstrapping VaR", format_currency(boot_var_b))
-    c2.metric("Hist. Bootstrapping ES", format_currency(boot_es_b))
-    c3.metric("Gaußsch VaR", format_currency(g_var_b))
-    c3.metric("Gaußsch ES", format_currency(g_es_b))
-    c4.metric("Lognorm VaR", format_currency(mc_var_b))
-    c4.metric("Lognorm ES", format_currency(mc_es_b))
+    d_bhs_var  = calculate_pct_delta(bhs_var_a, bhs_var_b)
+    d_bhs_es   = calculate_pct_delta(bhs_es_a, bhs_es_b)
+    d_boot_var = calculate_pct_delta(boot_var_a, boot_var_b)
+    d_boot_es  = calculate_pct_delta(boot_es_a, boot_es_b)
+    d_g_var    = calculate_pct_delta(g_var_a, g_var_b)
+    d_g_es     = calculate_pct_delta(g_es_a, g_es_b)
+    d_mc_var   = calculate_pct_delta(mc_var_a, mc_var_b)
+    d_mc_es    = calculate_pct_delta(mc_es_a, mc_es_b)
+
+    # Lambda-Hilfsfunktion zur sauberen Formatierung des Delta-Labels
+    fmt_d = lambda val: f"{val:+.1f}%" if val is not None else None
+
+    cb1, cb2, cb3, cb4 = st.columns(4)
+
+    cb1.metric("BHS VaR", format_currency(bhs_var_b), delta=fmt_d(d_bhs_var), delta_color="inverse")
+    cb1.metric("BHS ES", format_currency(bhs_es_b), delta=fmt_d(d_bhs_es), delta_color="inverse")
+    
+    cb2.metric("Hist. Bootstrapping VaR", format_currency(boot_var_b), delta=fmt_d(d_boot_var), delta_color="inverse")
+    cb2.metric("Hist. Bootstrapping ES", format_currency(boot_es_b), delta=fmt_d(d_boot_es), delta_color="inverse")
+    
+    cb3.metric("Gaußsch VaR", format_currency(g_var_b), delta=fmt_d(d_g_var), delta_color="inverse")
+    cb3.metric("Gaußsch ES", format_currency(g_es_b), delta=fmt_d(d_g_es), delta_color="inverse") # Fehler korrigiert (g_es_b statt g_es_a)
+    
+    cb4.metric("Lognorm VaR", format_currency(mc_var_b), delta=fmt_d(d_mc_var), delta_color="inverse")
+    cb4.metric("Lognorm ES", format_currency(mc_es_b), delta=fmt_d(d_mc_es), delta_color="inverse")
+
+    if Info_modus:
+        st.info(""" Die prozentualen Deltas geben die relative Änderung von VaR/ES zwischen den beiden ausgewählten Konfidenzlevels an. Delta = ((B - A) / |A|) * 100. Ein positives Delta (grün) deutet auf eine geringere Risko, während ein negatives Delta (rot) auf eine höhere Risiko hinweist """)
 
     st.write("---")
-    
+
+    #Fan-Chart Bereich
+
     col_chart_a, col_chart_b = st.columns(2)
     with col_chart_a:
         st.plotly_chart(plot_monte_carlo_fan_chart(paths_a, start_capital, alpha_a, f"Visualisierung (mit Lognorm) VaR A ({lvl_a_name})"), use_container_width=True)
