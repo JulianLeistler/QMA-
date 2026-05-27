@@ -217,7 +217,7 @@ def calculate_performance_kpis(portfolio_returns, benchmark_world_data, benchmar
 def get_comparison_data(log_ret, discrete_ret, capital):
     results = []
     # Standard-Level für den Subplot-Vergleich
-    levels = {"95 %": 0.05, "99 %": 0.01}
+    levels = {"95 %": 0.05, "99 %": 0.01, "90 %": 0.10, "80 %": 0.20}
     
     for h_name, days in horizons.items():
         for lvl_name, alpha in levels.items():
