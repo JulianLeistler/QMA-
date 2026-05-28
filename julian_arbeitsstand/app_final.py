@@ -627,7 +627,7 @@ def render_risk_tab(days, tab_title):
     cb4.metric("Lognorm ES", format_currency(mc_es_b), delta=fmt_d(d_mc_es), delta_color="normal")
 
     if Info_modus:
-        st.info(""" Die prozentualen Deltas geben die relative Änderung von VaR/ES zwischen den beiden ausgewählten Konfidenzlevels an. Delta = ((B - A) / |A|) * 100. Ein positives Delta (grün) deutet auf eine geringere Risko, während ein negatives Delta (rot) auf eine höhere Risiko hinweist """)
+        st.info(""" Die prozentualen Deltas geben die relative Änderung von VaR/ES zwischen den beiden ausgewählten Konfidenzlevels an. Delta = ((B - A) / |A|) * 100. Ein positives Delta (grün) deutet auf eine geringere Risko (das Risiko schrumpft). Während ein negatives Delta (rot) auf eine höhere Risiko hinweist (das Risko wächst) """)
 
     st.write("---")
 
