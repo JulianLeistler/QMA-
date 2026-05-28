@@ -614,17 +614,17 @@ def render_risk_tab(days, tab_title):
 
     cb1, cb2, cb3, cb4 = st.columns(4)
 
-    cb1.metric("BHS VaR", format_currency(bhs_var_b), delta=fmt_d(d_bhs_var), delta_color="inverse")
-    cb1.metric("BHS ES", format_currency(bhs_es_b), delta=fmt_d(d_bhs_es), delta_color="inverse")
+    cb1.metric("BHS VaR", format_currency(bhs_var_b), delta=fmt_d(d_bhs_var), delta_color="normal")
+    cb1.metric("BHS ES", format_currency(bhs_es_b), delta=fmt_d(d_bhs_es), delta_color="normal")
     
-    cb2.metric("Hist. Bootstrapping VaR", format_currency(boot_var_b), delta=fmt_d(d_boot_var), delta_color="inverse")
-    cb2.metric("Hist. Bootstrapping ES", format_currency(boot_es_b), delta=fmt_d(d_boot_es), delta_color="inverse")
+    cb2.metric("Hist. Bootstrapping VaR", format_currency(boot_var_b), delta=fmt_d(d_boot_var), delta_color="normal")
+    cb2.metric("Hist. Bootstrapping ES", format_currency(boot_es_b), delta=fmt_d(d_boot_es), delta_color="normal")
     
-    cb3.metric("Gaußsch VaR", format_currency(g_var_b), delta=fmt_d(d_g_var), delta_color="inverse")
-    cb3.metric("Gaußsch ES", format_currency(g_es_b), delta=fmt_d(d_g_es), delta_color="inverse") # Fehler korrigiert (g_es_b statt g_es_a)
+    cb3.metric("Gaußsch VaR", format_currency(g_var_b), delta=fmt_d(d_g_var), delta_color="normal")
+    cb3.metric("Gaußsch ES", format_currency(g_es_b), delta=fmt_d(d_g_es), delta_color="normal") # Fehler korrigiert (g_es_b statt g_es_a)
     
-    cb4.metric("Lognorm VaR", format_currency(mc_var_b), delta=fmt_d(d_mc_var), delta_color="inverse")
-    cb4.metric("Lognorm ES", format_currency(mc_es_b), delta=fmt_d(d_mc_es), delta_color="inverse")
+    cb4.metric("Lognorm VaR", format_currency(mc_var_b), delta=fmt_d(d_mc_var), delta_color="normal")
+    cb4.metric("Lognorm ES", format_currency(mc_es_b), delta=fmt_d(d_mc_es), delta_color="normal")
 
     if Info_modus:
         st.info(""" Die prozentualen Deltas geben die relative Änderung von VaR/ES zwischen den beiden ausgewählten Konfidenzlevels an. Delta = ((B - A) / |A|) * 100. Ein positives Delta (grün) deutet auf eine geringere Risko, während ein negatives Delta (rot) auf eine höhere Risiko hinweist """)
