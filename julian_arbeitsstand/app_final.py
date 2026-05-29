@@ -850,7 +850,7 @@ with tab_methoden:
             """)
         elif days_density <= 1260:
             st.info("""
-            * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt. Schwankungen nach oben werden mathematisch auch auf die Verlustseite geteilt.
+            * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt. Schwankungen nach oben werden mathematisch auch auf die Verlustseite geteilt. Optisch sieht es so aus als würde sich die Verteilung stauchen, mathematisch ist sie weiterehin eine symmetrische Glockenkurve.
             * BHS: zeigt zwei lokale Häufungen. Hier Zinserhöhung aus 2022 (Einbruch Tech-Werte) zu sonst sehr bullishen Phasen.
             * Lognormale Methode: Verteilung ist rechtsschief, da mathematisch kein negativer PnL möglich ist, allerdings können Gewinne nach oben unbegrenzt sein.
             """)
