@@ -803,7 +803,7 @@ with tab_methoden:
     if Info_modus:
         st.info("""
         Interpretation des Methodenvergleichs:
-        1. Basic Historical Simulation (BHS): Diese Methode basiert auf der Annahme, dass die historischen Renditen repräsentativ für die Zukunft sind. Bei einem MAG7-Portfolio wird Aufgrund eines Recency-Bias das Risiko (besonders bei längeren Horizonten) unterschätzt, da Tech-Werte in den letzen Jahren fast ausschließlich bullish waren. 
+        1. Basic Historical Simulation (BHS): Diese Methode basiert auf der Annahme, dass die historischen Renditen repräsentativ für die Zukunft sind. Bei einem MAG7-Portfolio wird aufgrund der überdurchschnittlichen Renditen der letzen Jahre das Risiko (besonders bei längeren Horizonten) unterschätzt, da Tech-Werte in den letzen Jahren fast ausschließlich bullish waren. 
         2. Historisches Bootstrapping: Diese Methode zieht mit Zurücklegen aus den historischen Renditen, um die Verteilung der Renditen an anhand von historischen Daten zu simulieren. Sie berücksichtigt die tatsächliche Verteilung der Renditen und schätzt den VaR basierend auf den simulierten Pfaden. Allerdings geht durch diese Simulation Volatilitätscluster verloren (Panik an der Börse erzeugt mehr Panik).
         3. Gaußsche Methode: Diese Methode nimmt an, dass die Renditen normalverteilt sind und berechnet den VaR analytisch basierend auf dem Mittelwert und der Standardabweichung der Renditen. Sie kann zu ungenauen Schätzungen führen, wenn die tatsächliche Renditeverteilung von der Normalverteilung abweicht, insbesondere wenn sie fette Tails oder Asymmetrie aufweist.
         4. Lognormal Methode: Dieses Modell geht davon aus, dass die täglichen Renditen Lognormalverteilt sind. Der große Vorteil gegenüber der Gaußschen Methode ist, dass ein Portfolio niemals weniger als Null (=Totalverlust)sein kann . Die Lognormal-Verteilung ist rechtsschief. Das bedeutet, dass Gewinne nach oben hin unbegrenzt wachsen, während Verluste auf maximal 100 % (Totalverlust) begrenzt sind. Die Ergebnisse ähneln sich stark den der Monte-Carlo-Simulation.
@@ -858,7 +858,7 @@ with tab_methoden:
             st.info("""
             * Gaußsche Methode: zeigt aufgrund von der Visualisierungsform keine perfekte Glockenkurve, allerdings ist diese Verteilung mathematisch weiterhin gegeben.
             * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt. Schwankungen nach oben werden mathematisch auch auf die Verlustseite geteilt, obwohl Volatilität in der Realität hauptsächlich aus bullishen Phasen stammt.
-            * BHS: unterschätzt das Risiko extrem, da die Historie fast ausschließlich bullish war. Keine Garantie, dass Zukunft genauso bullish sein wird (Recency-Bias).
+            * BHS: unterschätzt tendenziell das Risiko, da die Historie fast ausschließlich bullish war. Keine Garantie, dass Zukunft genauso bullish sein wird.
             * Lognormale Methode: Verteilung ist rechtsschief, da mathematisch kein negativer PnL möglich ist, allerdings können Gewinne nach oben unbegrenzt sein.
                     """)
         
