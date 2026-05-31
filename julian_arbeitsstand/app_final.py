@@ -41,14 +41,14 @@ bootstrap_seed = 1
 # ==========================================
 # 2. DATA LOADING (CACHED)
 # ==========================================
-@st.cache_data
+@st.cache_data(show_spinner="Lade Daten")
 def load_data():
-    data = yf.download(tickers, start=start_date, end=end_date, auto_adjust=False, progress=False)['Adj Close']
-    bench_world = yf.download(benchmark_world_ticker, start=start_date, end=end_date, auto_adjust=False, progress=False)['Adj Close']
-    bench_rf = yf.download(benchmark_risk_free_ticker, start=start_date, end=end_date, auto_adjust=False, progress=False)['Adj Close']
-    bench_sp500 = yf.download(benchmark_sp500_ticker, start=start_date, end=end_date, auto_adjust=False, progress=False)['Adj Close']
-    bench_nasdaq = yf.download(benchmark_nasdaq_ticker, start=start_date, end=end_date, auto_adjust=False, progress=False)['Adj Close']
-    dotcom = yf.download('^NDX', start="2000-04-01", end="2002-10-31", auto_adjust=False, progress=False)['Adj Close']
+    data = pd.read_csv("https://github.com/JulianLeistler/QMA-/raw/main/Data/data.csv", index_col=0, parse_dates=True)
+    bench_world = pd.read_csv("https://github.com/JulianLeistler/QMA-/raw/main/Data/bench_world.csv", index_col=0, parse_dates=True)
+    bench_rf = pd.read_csv("https://github.com/JulianLeistler/QMA-/raw/main/Data/bench_rf.csv", index_col=0, parse_dates=True)
+    bench_sp500 = pd.read_csv("https://github.com/JulianLeistler/QMA-/raw/main/Data/bench_sp500.csv", index_col=0, parse_dates=True)
+    bench_nasdaq = pd.read_csv("https://github.com/JulianLeistler/QMA-/raw/main/Data/bench_nasdaq.csv", index_col=0, parse_dates=True)
+    dotcom = pd.read_csv("https://github.com/JulianLeistler/QMA-/raw/main/Data/dotcom.csv", index_col=0, parse_dates=True)
     
     # Berechnungen
     dotcom_log_ret = np.log(dotcom / dotcom.shift(1)).dropna().values
@@ -581,9 +581,9 @@ def render_risk_tab(days, tab_title):
         
         In diesem Dashboard werden der Value at Risk (VaR) und der Expected Shortfall (ES) strikt als PnL (Profit and Loss) relativ zum Startkapital ausgewiesen. Ein negatives Vorzeichen impliziert einen Verlust, ein positives Vorzeichen einen Gewinn.
         
-        * Negativer VaR (z.B. -10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass unser Portfolio-Wert mit einer Wahrscheinlichkeit von 95 % nicht stärker fällt als um 10.000 USD vom Startkapital. In nur 5 Prozent der Fälle ist der Verlust größer.
-        * Negativer ES (z.B. -15.000 USD bei 5 % VaR-Level): Der ES quantifiziert das Risiko jenseits des VaR. Dieser besagt: Wenn das 5 % Worst-Case-Szenario eintritt, liegt der durchschnittliche Verlust bei 15.000 USD.
-        * Positiver VaR (z.B. +10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass selbst in dem ausgewählten Stress-Szenario keinen Verlust machen. Mit 95 prozentiger Wahrscheinlichkeit erzielen wir einen Gewinn von mindestens 10.000 USD über dem Startkapital.
+        * Negativer VaR (z.B. -10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass unser Portfolio-Wert mit einer Wahrscheinlichkeit von 95 Prozent nicht stärker als um 10.000 USD vom Startkapital fällt. In nur 5 Prozent der Fälle ist der Verlust größer.
+        * Negativer ES (z.B. -15.000 USD bei 5 % VaR-Level): Der ES quantifiziert das Risiko jenseits des VaR. Dieser besagt: Wenn das 5 Prozent Worst-Case-Szenario eintritt, liegt der durchschnittliche Verlust bei 15.000 USD.
+        * Positiver VaR (z.B. +10.000 USD bei 5 % VaR-Level): Dies bedeutet, dass wir selbst in dem ausgewählten Stress-Szenario keinen Verlust machen. Mit 95 prozentiger Wahrscheinlichkeit erzielen wir einen Gewinn von mindestens 10.000 USD über dem Startkapital.
         """)
 
     st.write("---") # Visuelle Trennung
@@ -627,7 +627,7 @@ def render_risk_tab(days, tab_title):
     cb4.metric("Lognorm ES", format_currency(mc_es_b), delta=fmt_d(d_mc_es), delta_color="normal")
 
     if Info_modus:
-        st.info(""" Die prozentualen Deltas geben die relative Änderung von VaR/ES zwischen den beiden ausgewählten Konfidenzlevels an. Delta = ((B - A) / |A|) * 100. Ein positives Delta (grün) deutet auf eine geringere Risko (das Risiko schrumpft). Während ein negatives Delta (rot) auf eine höhere Risiko hinweist (das Risko wächst) """)
+        st.info(""" Die prozentualen Deltas geben die relative Änderung von VaR/ES zwischen den beiden ausgewählten Konfidenzlevels an. Delta = ((B - A) / |A|) * 100. Ein positives Delta (grün) deutet auf ein geringeres Risko hin (das Risiko schrumpft). Während ein negatives Delta (rot) auf eine höheres Risiko hinweist (das Risko wächst). """)
 
     st.write("---")
 
@@ -640,7 +640,7 @@ def render_risk_tab(days, tab_title):
         st.plotly_chart(plot_monte_carlo_fan_chart(paths_b, start_capital, alpha_b, f"Visualisierung (mit Lognorm) VaR B ({lvl_b_name})"), use_container_width=True)
 
     if Info_modus:
-        st.info("""Fan-Chart mit Lognormaler Monte-Carlo-Simulation erstellt. Die dunkelblaue Linie repräsentiert den Median der simulierten Pfade, die rote Linie zeigt den Worst-Case-Pfad (VaR-Level) und die grüne Linie den Best-Case-Pfad (1 - VaR-Level). Die schattierten Bereiche verdeutlichen die Unsicherheit zwischen diesen Extremen. Ein engeres Band deutet auf geringere Volatilität hin, während ein breiteres Band auf eine höhere Volatilität hindeutet.""")
+        st.info("""Fan-Chart mit lognormaler Monte-Carlo-Simulation erstellt. Die dunkelblaue Linie repräsentiert den Median der simulierten Pfade, die rote Linie zeigt den Worst-Case-Pfad (VaR-Level) und die grüne Linie den Best-Case-Pfad (1 - VaR-Level). Die schattierten Bereiche verdeutlichen die Unsicherheit zwischen diesen Extremen. Ein engeres Band deutet auf geringere Volatilität hin, während ein breiteres Band auf eine höhere Volatilität hindeutet.""")
 # ==========================================
 # 6. STREAMLIT APP LAYOUT
 # ==========================================
@@ -648,12 +648,12 @@ def render_risk_tab(days, tab_title):
 # Sidebar
 st.sidebar.title("Magnificent 7: Risiko - Dashboard")
 st.sidebar.write("Datengrundlage: " \
-"18.Mai.2012 (ab META ehm. Facebook IPO) bis Ende 1. Quartal 2026.)")
+"18.Mai 2012 (ab META ehem. Facebook IPO) bis Ende 1. Quartal 2026")
 st.sidebar.markdown("---")
 start_capital = st.sidebar.number_input("Startkapital ($)", value=100_000, step=10_000)
 st.sidebar.markdown("---")
 Info_modus = st.sidebar.toggle("Info-Modus aktivieren", value=False)
-Note_Infomodus = st.sidebar.info("Im Info-Modus werden zusätzliche Erklärungen und Interpretation geliefert. Nutzung nicht geeignet für stetiges an- und auschalten, da Perfomance von App darunter leiden könnte.")
+Note_Infomodus = st.sidebar.info("Im Info-Modus werden zusätzliche Erklärungen und Interpretationen geliefert. Nutzung nicht geeignet für stetiges an- und ausschalten, da Performance der App darunter leiden könnte.")
 tab_uebersicht, tab_1y, tab_5y, tab_10y, tab_black_swan, tab_methoden = st.tabs([
     "Übersicht", "1-Jahres-Risiko", "5-Jahres-Risiko", "10-Jahres-Risiko", "Black-Swan-Sim","Methodenvergleich"
 ])
@@ -664,10 +664,10 @@ with tab_uebersicht:
     kpis = calculate_performance_kpis(port_ret_discrete, bench_world, bench_rf)
     
     col1, col2, col3, col4 = st.columns(4)
-    col1.metric("Beta", f"{kpis['Beta']:.2f}", help="Maß für die Volatilität des Portfolios im Vergleich zum Markt. Beta > 1 bedeutet höhere Volatilität, Beta < 1 bedeutet niedrigere Volatilität als der Markt.")
+    col1.metric("Beta", f"{kpis['Beta']:.2f}", help="Maß für die Sensitivität des Portfolios im Vergleich zum Markt. Beta > 1 bedeutet höhere Volatilität, Beta < 1 bedeutet niedrigere Volatilität als der Markt.")
     col2.metric("Sharpe Ratio", f"{kpis['Sharpe_Ratio']:.2f}", help="Überrendite pro Einheit Volatilität. Je höher, desto besser die risikoadjustierte Performance.")
     col3.metric("Roy's Safety First", f"{kpis['Roys_Safety_First']:.2f}", help="Wahrscheinlichkeit, dass die Rendite unter eine Mindestrendite (risk-free asset, hier US-Staatsanleihe) fällt.")
-    col4.metric("Treynor-Ratio", f"{kpis['Treynor_Ratio']:.2f}", help="Überrendite pro Einheit des systematischen Risikos (Beta).KPI zur Bewertung der effizienz des Portfolios im Vergleich zum Markt.")
+    col4.metric("Treynor-Ratio", f"{kpis['Treynor_Ratio']:.2f}", help="Überrendite pro Einheit des systematischen Risikos (Beta). KPI zur Bewertung der Effizienz des Portfolios im Vergleich zum Markt.")
     
     st.write("---")
    
@@ -729,7 +729,7 @@ with tab_10y:
 # ----------------- REITER 4: BLACK SWAN -----------------
 with tab_black_swan:
     st.header("Black-Swan-Simulation")
-    st.info("Das Black-Swan-Event simuliert den VaR & ES auf Basis eines im Zeitverlauf zufällig eintretenden Black-Swan. Dieses Event wurde mit den Renditen & Volatilität aus dem Crash der Dotcom-Blase simuliert (04-2000 bis 11-2002).")
+    st.info("Das Black-Swan-Event simuliert den VaR & ES auf Basis eines im Zeitverlauf zufällig eintretenden Black-Swans. Dieses Event wurde mit den Renditen & Volatilitäten aus dem Crash der Dotcom-Blase simuliert (04-2000 bis 11-2002).")
     
     col1, col2 = st.columns(2)
     with col1:
@@ -770,7 +770,7 @@ with tab_black_swan:
         st.info("""
         Interpretation der Black-Swan-Simulation:
         * Median-Vergleich: Der Vergleich der Median-Pfade zwischen Normal- und Black-Swan-Simulation zeigt, dass selbst der "durchschnittliche" Pfad im Black-Swan-Szenario deutlich schlechter abschneidet als im normalen Szenario, was die systematischen Auswirkungen solcher Ereignisse auf die Portfolio-Performance verdeutlicht.
-        * Black-Swan-Abrutsch: Der Absturz am rechten Rand des Charts in der Black-Swan-Sim ist zu erklären, da der Crash nicht nur einfach an Tag 1 modelliert ist sondern als zufällig eintretendes Event im Horizont verteilt ist. Je länger die Simulation dauert desto mehr der "guten" Jahren werden durch die "schlechten" Bedingungen des Black-Swan zunichtegemacht. Am Anfang der Analyse sind die absoluten Werte noch relativ klein, aber über die Zeit "frisst" sich der Effekt tiefer in die Vermögensentwicklung. Dieser Effekt führt zu einem stärkeren Abrutschen der Werte am Ende des Horizonts. 
+        * Black-Swan-Abrutsch: Der Absturz am rechten Rand des Charts in der Black-Swan-Sim ist zu erklären, da der Crash nicht nur einfach an Tag 1 modelliert ist, sondern als zufällig eintretendes Event im Horizont verteilt ist. Je länger die Simulation dauert, desto mehr der "guten" Jahren werden durch die "schlechten" Bedingungen des Black-Swans zunichtegemacht. Am Anfang des Analysezeitraums sind die absoluten Werte noch relativ klein, aber über die Zeit "frisst" sich der Effekt tiefer in die Vermögensentwicklung. Dieser Effekt führt zu einem stärkeren Abrutschen der Werte am Ende des Horizonts. 
         """)
 # ----------------- REITER 5: METHODENVERGLEICH -----------------
 with tab_methoden:
@@ -803,10 +803,10 @@ with tab_methoden:
     if Info_modus:
         st.info("""
         Interpretation des Methodenvergleichs:
-        1. Basic Historical Simulation (BHS): Diese Methode basiert auf der Annahme, dass die historischen Renditen repräsentativ für die Zukunft sind. Bei einem MAG7-Portfolio wird aufgrund der überdurchschnittlichen Renditen der letzen Jahre das Risiko (besonders bei längeren Horizonten) unterschätzt, da Tech-Werte in den letzen Jahren fast ausschließlich bullish waren. 
-        2. Historisches Bootstrapping: Diese Methode zieht mit Zurücklegen aus den historischen Renditen, um die Verteilung der Renditen an anhand von historischen Daten zu simulieren. Sie berücksichtigt die tatsächliche Verteilung der Renditen und schätzt den VaR basierend auf den simulierten Pfaden. Allerdings geht durch diese Simulation Volatilitätscluster verloren (Panik an der Börse erzeugt mehr Panik).
-        3. Gaußsche Methode: Diese Methode nimmt an, dass die Renditen normalverteilt sind und berechnet den VaR analytisch basierend auf dem Mittelwert und der Standardabweichung der Renditen. Sie kann zu ungenauen Schätzungen führen, wenn die tatsächliche Renditeverteilung von der Normalverteilung abweicht, insbesondere wenn sie fette Tails oder Asymmetrie aufweist.
-        4. Lognormal Methode: Dieses Modell geht davon aus, dass die täglichen Renditen Lognormalverteilt sind. Der große Vorteil gegenüber der Gaußschen Methode ist, dass ein Portfolio niemals weniger als Null (=Totalverlust)sein kann . Die Lognormal-Verteilung ist rechtsschief. Das bedeutet, dass Gewinne nach oben hin unbegrenzt wachsen, während Verluste auf maximal 100 % (Totalverlust) begrenzt sind. Die Ergebnisse ähneln sich stark den der Monte-Carlo-Simulation.
+        1. Basic Historical Simulation (BHS): Diese Methode basiert auf der Annahme, dass die historischen Renditen repräsentativ für die Zukunft sind. Bei einem MAG7-Portfolio wird aufgrund der überdurchschnittlichen Renditen der letzen Jahre das Risiko (besonders bei längeren Horizonten) unterschätzt, da Tech-Werte in den letzen Jahren fast ausschließlich bullish waren. Es werden über rollierenden Fenster tatsächliche Portfoliowerte berechnet die dem gewählten Anlagehorizont entsprechen. Dann werden die Portfoliowerte nach ihrer Performance sortiert und so der VaR als bestimmtes Quantil der Verteilung der Portfoliowerte abgelesen.
+        2. Historisches Bootstrapping: Diese Methode zieht mit Zurücklegen aus den historischen Renditen, um die Verteilung der Renditen anhand von historischen Renditen zu simulieren. Sie berücksichtigt die tatsächliche Verteilung der Renditen und schätzt den VaR basierend auf historischen Renditen. Allerdings gehen durch diese Simulation Volatilitätscluster verloren (Panik an der Börse erzeugt mehr Panik).
+        3. Gaußsche Methode: Diese Methode nimmt an, dass die Renditen normalverteilt sind und berechnet den VaR analytisch basierend auf dem Mittelwert und der Standardabweichung der Renditen. Sie kann zu ungenauen Schätzungen führen, wenn die tatsächliche Renditeverteilung von der Normalverteilung abweicht, insbesondere wenn sie Fat Tails oder Asymmetrieen aufweist.
+        4. Lognormal Methode: Dieses Modell geht davon aus, dass die täglichen Renditen Lognormalverteilt sind. Der große Vorteil gegenüber der Gaußschen Methode ist, dass ein Portfolio niemals weniger als Null (=Totalverlust) sein kann . Die Lognormal-Verteilung ist rechtsschief. Das bedeutet, dass Gewinne nach oben hin unbegrenzt wachsen, während Verluste auf maximal 100 % (Totalverlust) begrenzt sind. Die Ergebnisse ähneln stark denen der Monte-Carlo-Simulation (Bezogen auf unsere Analyse).
         """)
     
     st.write("---")
@@ -844,22 +844,22 @@ with tab_methoden:
         st.info("""Interpretation der Dichteverteilung (dynamisch auf ausgewählten Horizont): """)
         if days_density <= 252:
             st.info("""
-            * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt.
+            * Gaußsche Methode: zeigt symmetrische Glockenkurve, die die Volatilität als Risiko auf beiden Seiten gleichverteilt.
             * Historische Methoden: zeigen die tatsächliche Verteilung der P&L basierend auf historischen Daten.
-            * Lognormale Methode: zeigt die Verteilung basierend auf einer lognormalen Annahme.
+            * Lognormale Methode: zeigt die Verteilung basierend auf einer rechtsschiefen lognormalen Annahme.
             """)
         elif days_density <= 1260:
             st.info("""
-            * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt. Schwankungen nach oben werden mathematisch auch auf die Verlustseite geteilt. Optisch sieht es so aus als würde sich die Verteilung stauchen, mathematisch ist sie weiterehin eine symmetrische Glockenkurve.
+            * Gaußsche Methode: zeigt symmetrische Glockenkurve, die die Volatilität als Risiko auf beiden Seiten gleichverteilt. Schwankungen nach oben werden mathematisch auch auf die Verlustseite übertragen. Optisch sieht es so aus, als würde sich die Verteilung stauchen, mathematisch ist sie weiterhin eine symmetrische Glockenkurve.
             * BHS: zeigt zwei lokale Häufungen. Hier Zinserhöhung aus 2022 (Einbruch Tech-Werte) zu sonst sehr bullishen Phasen.
-            * Lognormale Methode: Verteilung ist rechtsschief, da mathematisch kein negativer PnL möglich ist, allerdings können Gewinne nach oben unbegrenzt sein.
+            * Lognormale Methode: Verteilung ist rechtsschief. Der Verlust nach der PnL-Logik ist auf einen Totalverlust begrenzt, allerdings können Gewinne nach oben unbegrenzt sein.
             """)
         else:
             st.info("""
             * Gaußsche Methode: zeigt aufgrund von der Visualisierungsform keine perfekte Glockenkurve, allerdings ist diese Verteilung mathematisch weiterhin gegeben.
-            * Gaußsche Methode: zeigt symetrische Glockenkurve, die die Voalität als Risiko auf beiden Seiten gleichverteilt. Schwankungen nach oben werden mathematisch auch auf die Verlustseite geteilt, obwohl Volatilität in der Realität hauptsächlich aus bullishen Phasen stammt.
+            * Gaußsche Methode: zeigt symmetrische Glockenkurve, die die Volatilität als Risiko auf beiden Seiten gleichverteilt. Schwankungen nach oben werden mathematisch auch auf die Verlustseite übertragen, obwohl Volatilität in der Realität hauptsächlich aus bullishen Phasen stammt.
             * BHS: unterschätzt tendenziell das Risiko, da die Historie fast ausschließlich bullish war. Keine Garantie, dass Zukunft genauso bullish sein wird.
-            * Lognormale Methode: Verteilung ist rechtsschief, da mathematisch kein negativer PnL möglich ist, allerdings können Gewinne nach oben unbegrenzt sein.
+            * Lognormale Methode: Verteilung ist rechtsschief. Der Verlust nach der PnL-Logik ist auf einen Totalverlust begrenzt, allerdings können Gewinne nach oben unbegrenzt sein.
                     """)
         
 
