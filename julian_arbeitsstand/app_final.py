@@ -41,6 +41,8 @@ bootstrap_seed = 1
 # ==========================================
 # 2. DATA LOADING (CACHED)
 # ==========================================
+#Hier müssen wir statische Daten zurückgreifen, da API-Calls über yfinance als nicht Admin User immer wieder zu Caching-Probleme führen. Daten liegen als CSV auf GitHub. 
+
 @st.cache_data(show_spinner="Lade Daten")
 def load_data():
     data = pd.read_csv("https://github.com/JulianLeistler/QMA-/raw/main/Data/data.csv", index_col=0, parse_dates=True)
